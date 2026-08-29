@@ -616,6 +616,8 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/dao/settingsdao.cpp
   src/library/dao/trackdao.cpp
   src/library/dao/trackschema.cpp
+  src/library/edmc/edmchtmlparser.cpp
+  src/library/edmc/edmcsubscriptionstore.cpp
   src/library/tabledelegates/defaultdelegate.cpp
   src/library/dlgcoverartfullsize.cpp
   src/library/dlgcoverartfullsize.ui
@@ -1546,6 +1548,8 @@ if(BUILD_TESTING)
     src/test/directorydaotest.cpp
     src/test/duration_test.cpp
     src/test/durationutiltest.cpp
+    src/test/edmchtmlparser_test.cpp
+    src/test/edmcsubscriptionstore_test.cpp
     #TODO: write useful tests for refactored effects system
     #src/test/effectchainslottest.cpp
     src/test/enginebufferscalelineartest.cpp
