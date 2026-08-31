@@ -1,0 +1,11 @@
+[Unit]
+Description=Mount removable media %I for PFLX
+BindsTo=dev-%i.device
+After=dev-%i.device
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/pflx-usb-mount add /dev/%I
+ExecStop=/usr/local/sbin/pflx-usb-mount remove /dev/%I
+TimeoutStopSec=20

@@ -1,0 +1,33 @@
+include:
+  file: trixie-minbase.yaml
+
+device:
+  hostname: piflex
+  user1: piflex
+  user1uid: 1000
+  user1gid: 1000
+  user1sudo: nopasswd
+
+image:
+  name: piflex-os-dev
+  boot_part_size: 200%
+  root_part_size: 300%
+
+layer:
+  app: pflx-runtime
+
+ssh:
+  pubkey_user1: REPLACE_WITH_YOUR_SSH_PUBLIC_KEY
+  pubkey_only: y
+
+locale:
+  default: en_CA.UTF-8
+  keyboard_keymap: us
+  keyboard_layout: English (US)
+  timezone: America/Vancouver
+
+ieee80211:
+  regdom: CA
+
+pflx:
+  assetdir: ${@SRCROOT}

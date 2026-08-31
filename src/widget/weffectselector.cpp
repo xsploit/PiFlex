@@ -1,12 +1,37 @@
 #include "widget/weffectselector.h"
 
 #include <QAbstractItemView>
+#include <QGuiApplication>
+#include <QScreen>
+#include <QStyledItemDelegate>
 #include <QtDebug>
 
 #include "effects/effectsmanager.h"
 #include "effects/visibleeffectslist.h"
 #include "moc_weffectselector.cpp"
 #include "widget/effectwidgetutils.h"
+
+namespace {
+
+constexpr int kTouchEffectRowHeight = 56;
+constexpr int kTouchEffectPopupWidth = 420;
+
+class TouchEffectItemDelegate final : public QStyledItemDelegate {
+  public:
+    explicit TouchEffectItemDelegate(QObject* pParent)
+            : QStyledItemDelegate(pParent) {
+    }
+
+    QSize sizeHint(const QStyleOptionViewItem& option,
+            const QModelIndex& index) const override {
+        QSize size = QStyledItemDelegate::sizeHint(option, index);
+        size.setHeight(qMax(size.height(), kTouchEffectRowHeight));
+        size.setWidth(qMax(size.width(), kTouchEffectPopupWidth));
+        return size;
+    }
+};
+
+} // namespace
 
 WEffectSelector::WEffectSelector(QWidget* pParent, EffectsManager* pEffectsManager)
         : QComboBox(pParent),
@@ -18,6 +43,41 @@ WEffectSelector::WEffectSelector(QWidget* pParent, EffectsManager* pEffectsManag
     // Allow click focus though so the list can always be opened by mouse,
     // see https://github.com/mixxxdj/mixxx/issues/10184
     setFocusPolicy(Qt::ClickFocus);
+
+    // The BiteDJ side panel is intentionally compact, but the selector popup
+    // must not inherit that tiny geometry. Give every effect a finger-sized
+    // row. Do not install a QScroller gesture here: on the Pi touchscreen it
+    // consumes the release event, which lets the list move but prevents the
+    // tapped effect from being activated.
+    setItemDelegate(new TouchEffectItemDelegate(this));
+    setMaxVisibleItems(8);
+    view()->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    view()->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+}
+
+void WEffectSelector::showPopup() {
+    const QScreen* pScreen = QGuiApplication::screenAt(
+            mapToGlobal(rect().center()));
+    const int availableWidth = pScreen != nullptr
+            ? pScreen->availableGeometry().width()
+            : kTouchEffectPopupWidth;
+    const int availableHeight = pScreen != nullptr
+            ? pScreen->availableGeometry().height()
+            : kTouchEffectRowHeight * 8;
+
+    const int popupWidth = qMin(
+            qMax(width(), kTouchEffectPopupWidth),
+            qMax(width(), availableWidth - 24));
+    view()->setMinimumWidth(popupWidth);
+    view()->setMaximumWidth(popupWidth);
+
+    // Keep the popup on-screen on smaller Mako-class displays while showing
+    // up to eight effects at once on the 10-inch Touch Display 2.
+    setMaxVisibleItems(qBound(4,
+            (availableHeight - 48) / kTouchEffectRowHeight,
+            8));
+
+    QComboBox::showPopup();
 }
 
 void WEffectSelector::setup(const QDomNode& node, const SkinContext& context) {
@@ -55,18 +115,15 @@ void WEffectSelector::populate() {
     clear();
 
     const QList<EffectManifestPointer> visibleEffectManifests = m_pVisibleEffectsList->getList();
-    QFontMetrics metrics(font());
-
     // Add empty item: no effect
     addItem(kNoEffectString);
     setItemData(0, QVariant(tr("No effect loaded.")), Qt::ToolTipRole);
 
     for (int i = 0; i < visibleEffectManifests.size(); ++i) {
         const EffectManifestPointer pManifest = visibleEffectManifests.at(i);
-        QString elidedDisplayName = metrics.elidedText(pManifest->displayName(),
-                Qt::ElideMiddle,
-                view()->width() - 2);
-        addItem(elidedDisplayName, QVariant(pManifest->uniqueId()));
+        // Keep the complete name in the model. The closed combo clips it to
+        // the compact side panel, while the widened popup can show it whole.
+        addItem(pManifest->displayName(), QVariant(pManifest->uniqueId()));
 
         QString name = pManifest->name();
         QString description = pManifest->description();

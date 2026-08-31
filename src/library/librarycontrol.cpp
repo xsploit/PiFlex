@@ -10,6 +10,7 @@
 #include "control/controlencoder.h"
 #include "control/controlobject.h"
 #include "control/controlpushbutton.h"
+#include "library/edmc/edmcbrowserview.h"
 #include "library/library.h"
 #include "library/libraryview.h"
 #include "mixer/playermanager.h"
@@ -694,6 +695,35 @@ void LibraryControl::slotMoveVertical(double v) {
         return;
     }
 
+    // The active library view can remain EDMC while BiteDJ is visibly showing
+    // the source sidebar. Visible pane state must win over the cached active
+    // view or encoder movement is delivered to the hidden EDMC list.
+    ControlObject* pSidebarVisible = ControlObject::getControl(
+            ConfigKey(QStringLiteral("[Sidebar]"),
+                    QStringLiteral("sidebar_visible")),
+            ControlFlag::NoWarnIfMissing);
+    if (bitedj_isLibraryPageActive() && pSidebarVisible &&
+            pSidebarVisible->get() > 0.5 && m_pSidebarWidget) {
+        slotSelectSidebarItem(static_cast<int>(v));
+        return;
+    }
+
+    // EDMC is a controller-first native list rather than a WTrackTableView.
+    // Drive it directly so encoder movement is independent of transient Qt
+    // focus and always advances exactly the number of MIDI encoder steps.
+    if (m_pLibraryWidget && !m_pLibraryWidget->getCurrentTrackTableView()) {
+        if (auto* pEdmcView = dynamic_cast<EdmcBrowserView*>(
+                    m_pLibraryWidget->getActiveView())) {
+            pEdmcView->moveSelection(static_cast<int>(v));
+            return;
+        }
+    }
+
+    // BiteDJ shows the source/category sidebar and the selected source's
+    // content as mutually exclusive panes. Do not trust Qt focus here: after
+    // VIEW, BACK, or a touch event it can still refer to the hidden pane.
+    // Drive the visible sidebar model directly so the FLX6 encoder always
+    // moves its highlighted row without requiring a preparatory screen tap.
     switch (m_focusedWidget) {
     case FocusWidget::Sidebar: {
         int i = static_cast<int>(v);
@@ -784,13 +814,129 @@ void LibraryControl::slotMoveHorizontal(double v) {
 
 void LibraryControl::slotMoveFocusForward(double v) {
     if (v > 0) {
+        // An open popup owns the encoder. Accept its highlighted item before
+        // considering any of the Browse page widgets.
+        if (m_focusedWidget == FocusWidget::ContextMenu) {
+            slotGoToItem(1);
+            return;
+        }
+        // BiteDJ's category screen is controlled by sidebar_visible. Qt focus
+        // may still point at the previous page immediately after VIEW opens
+        // Browse, so use the visible UI state as the source of truth. Encoder
+        // push must activate the highlighted category/folder on the first try.
+        ControlObject* pSidebarVisible = ControlObject::getControl(
+                ConfigKey(QStringLiteral("[Sidebar]"),
+                        QStringLiteral("sidebar_visible")),
+                ControlFlag::NoWarnIfMissing);
+        if (bitedj_isLibraryPageActive() && pSidebarVisible &&
+                pSidebarVisible->get() > 0.5 && m_pSidebarWidget) {
+            // Activate the visible sidebar selection directly. Calling
+            // slotGoToItem after setFocus is racy because focusChanged is
+            // delivered later, leaving m_focusedWidget pointed at the hidden
+            // tracks pane for this same MIDI event.
+            if (m_pSidebarWidget->isLeafNodeSelected()) {
+                m_pSidebarWidget->activateSelectedLeaf();
+                setLibraryFocus(FocusWidget::TracksTable);
+            } else {
+                m_pSidebarWidget->toggleSelectedItem();
+            }
+            return;
+        }
+        // Only route to EDMC after proving the normal source sidebar is not
+        // the visible pane. WLibrary intentionally retains the active EDMC
+        // view while the sidebar is displayed.
+        if (m_pLibraryWidget) {
+            if (auto* pEdmcView = dynamic_cast<EdmcBrowserView*>(
+                        m_pLibraryWidget->getActiveView())) {
+                pEdmcView->activateSelection();
+                return;
+            }
+        }
+        // Controller-first custom library views (for example EDMC) are not
+        // WTrackTableViews, but still use the TracksTable focus category. Let
+        // Browse press activate their highlighted row instead of moving focus
+        // away from the view.
+        if (m_focusedWidget == FocusWidget::TracksTable && m_pLibraryWidget &&
+                !m_pLibraryWidget->getCurrentTrackTableView()) {
+            slotGoToItem(1);
+            return;
+        }
         slotMoveFocus(1);
     }
 }
 
 void LibraryControl::slotMoveFocusBackward(double v) {
     if (v > 0) {
-        slotMoveFocus(-1);
+        ControlObject* pSidebarVisible = ControlObject::getControl(
+                ConfigKey(QStringLiteral("[Sidebar]"),
+                        QStringLiteral("sidebar_visible")),
+                ControlFlag::NoWarnIfMissing);
+        if (bitedj_isLibraryPageActive() && pSidebarVisible &&
+                pSidebarVisible->get() > 0.5 && m_pSidebarWidget) {
+            QKeyEvent event{QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier};
+            QApplication::sendEvent(m_pSidebarWidget, &event);
+            return;
+        }
+        if (m_pLibraryWidget) {
+            if (auto* pEdmcView = dynamic_cast<EdmcBrowserView*>(
+                        m_pLibraryWidget->getActiveView())) {
+                if (pEdmcView->navigateBack()) {
+                    return;
+                }
+                // At the EDMC root, BACK returns to the Browse sidebar.
+                ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                           QStringLiteral("sidebar_visible")),
+                        1);
+                setLibraryFocus(FocusWidget::Sidebar);
+                return;
+            }
+        }
+
+        switch (m_focusedWidget) {
+        case FocusWidget::Sidebar: {
+            // QTreeView's Left action collapses an expanded folder; pressing
+            // it again on a collapsed item selects its parent.
+            QKeyEvent event{QEvent::KeyPress, Qt::Key_Left, Qt::NoModifier};
+            QApplication::sendEvent(m_pSidebarWidget, &event);
+            return;
+        }
+        case FocusWidget::TracksTable:
+            // Return from any track/library view to its source in the sidebar.
+            // Changing focus alone is not enough in BiteDJ because its category
+            // and track panes are mutually exclusive skin containers.
+            ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                       QStringLiteral("sidebar_visible")),
+                    1);
+            setLibraryFocus(FocusWidget::Sidebar);
+            return;
+        case FocusWidget::Searchbar:
+            // First BACK clears an active query; the next returns to sidebar.
+            if (m_pSearchbox && !m_pSearchbox->currentText().isEmpty()) {
+                m_pSearchbox->slotClearSearch();
+            } else {
+                ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                           QStringLiteral("sidebar_visible")),
+                        1);
+                setLibraryFocus(FocusWidget::Sidebar);
+            }
+            return;
+        case FocusWidget::ContextMenu:
+        case FocusWidget::Dialog:
+        case FocusWidget::Unknown: {
+            QKeyEvent event{QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier};
+            if (auto* pWindow = QApplication::focusWindow()) {
+                QApplication::sendEvent(pWindow, &event);
+            }
+            return;
+        }
+        case FocusWidget::None:
+        default:
+            ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
+                                       QStringLiteral("sidebar_visible")),
+                    1);
+            setLibraryFocus(FocusWidget::Sidebar);
+            return;
+        }
     }
 }
 
@@ -1053,6 +1199,10 @@ void LibraryControl::slotGoToItem(double v) {
         WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
         if (pTrackTableView) {
             pTrackTableView->activateSelectedTrack();
+        } else {
+            // Non-table native library views consume Return themselves.
+            emitKeyEvent(QKeyEvent{
+                    QEvent::KeyPress, Qt::Key_Return, Qt::NoModifier});
         }
         return;
     }

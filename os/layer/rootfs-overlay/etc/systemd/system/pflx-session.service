@@ -1,0 +1,31 @@
+[Unit]
+Description=PiFlex Sway and BiteDJ kiosk
+After=systemd-user-sessions.service systemd-logind.service pflx-tune.service
+Wants=systemd-logind.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=@PIFLEX_USER@
+PAMName=login
+WorkingDirectory=/home/@PIFLEX_USER@
+Environment=HOME=/home/@PIFLEX_USER@
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=QT_QPA_PLATFORM=wayland
+Environment=QT_ENABLE_HIGHDPI_SCALING=0
+Environment=ENGINE_CPU=3
+Environment=CONTROLLER_CPU=2
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+UtmpIdentifier=tty1
+UtmpMode=user
+ExecStart=/usr/local/bin/start-pflx-session
+Restart=on-failure
+RestartSec=2
+Nice=-10
+LimitRTPRIO=95
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=graphical.target

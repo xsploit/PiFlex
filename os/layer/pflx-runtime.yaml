@@ -1,0 +1,51 @@
+# METABEGIN
+# X-Env-Layer-Name: pflx-runtime
+# X-Env-Layer-Category: application
+# X-Env-Layer-Desc: PFLX OS BiteDJ appliance runtime for Raspberry Pi 5
+# X-Env-Layer-Version: 0.1.0
+# X-Env-Layer-Requires: rpi-user-credentials,systemd-net-min,
+#  systemd-timesyncd,openssh-server
+#
+# X-Env-VarPrefix: pflx
+#
+# X-Env-Var-assetdir:
+# X-Env-Var-assetdir-Desc: PFLX external source root
+# X-Env-Var-assetdir-Required: y
+# X-Env-Var-assetdir-Valid: string
+# X-Env-Var-assetdir-Set: y
+# METAEND
+---
+mmdebstrap:
+  packages:
+    - alsa-utils
+    - avahi-daemon
+    - brightnessctl
+    - ca-certificates
+    - chromium
+    - cloud-guest-utils
+    - curl
+    - dbus-user-session
+    - dosfstools
+    - e2fsprogs
+    - evtest
+    - exfatprogs
+    - foot
+    - jq
+    - libgl1-mesa-dri
+    - libnss-mdns
+    - mixxx
+    - nodejs
+    - npm
+    - ntfs-3g
+    - polkitd
+    - pkexec
+    - qt6-qpa-plugins
+    - qt6-wayland
+    - rsync
+    - sway
+    - udisks2
+    - usbutils
+    - wvkbd
+    - zstd
+  customize-hooks:
+    - sh ${IGconf_pflx_assetdir}/scripts/customize-rootfs.sh $1 ${IGconf_device_user1} ${IGconf_pflx_assetdir}

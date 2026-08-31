@@ -1,0 +1,2 @@
+#!/bin/sh
+pkill -TERM -x mixxx 2>/dev/null || true

@@ -1,0 +1,14 @@
+[Unit]
+Description=Expand the PFLX root filesystem to fill the storage device
+DefaultDependencies=no
+After=local-fs.target
+Before=multi-user.target
+ConditionPathExists=!/var/lib/pflx/root-grown
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pflx-grow-root
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

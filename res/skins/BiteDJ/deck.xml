@@ -434,11 +434,11 @@
       <WidgetGroup>
         <ObjectName>DeckOverviewContainer</ObjectName>
         <Layout>vertical</Layout>
-        <Size>0me,50f</Size>
+        <Size>0me,80f</Size>
         <Children>
           <Overview>
             <ObjectName>DeckOverview</ObjectName>
-            <Size>0me,100f</Size>
+            <Size>0me,160f</Size>
             <Channel><Variable name="channel"/></Channel>
             <BgColor>#000</BgColor>
             <SignalColor>#222</SignalColor>
@@ -449,8 +449,8 @@
             <!-- Time left in the track, drawn straight onto the summary as a
                  watermark: centred and translucent enough to read the signal
                  through. Scale is a share of the height the summary is
-                 *visible* over, which here is the container's 50px and not the
-                 widget's own 100px above — the strip deliberately shows the top
+                 *visible* over, which here is the container's 80px and not the
+                 widget's own 160px above — the strip deliberately shows the top
                  half of a double-height overview, so a scale against the widget
                  would centre the digits on the cut edge and lose their bottom
                  half. This strip is what the settings/browse/sampler pages show

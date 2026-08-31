@@ -176,9 +176,16 @@ void WaveformRendererSignalBase::getGains(float* pAllGain,
         float* pHighGain) {
     WaveformWidgetFactory* factory = WaveformWidgetFactory::instance();
     if (pAllGain) {
-        *pAllGain = static_cast<CSAMPLE_GAIN>(m_waveformRenderer->getGain(applyCompensation)) *
-                static_cast<CSAMPLE_GAIN>(factory->getVisualGain(WaveformWidgetFactory::All));
-        ;
+        // Keep the waveform at a stable visual scale while the DJ adjusts
+        // channel trim. The trim still affects audio; it simply no longer
+        // changes the height of the rendered waveform and destroys the visual
+        // comparison between decks. Preserve each renderer's established 2x
+        // compensation so neutral trim keeps its familiar large appearance.
+        constexpr CSAMPLE_GAIN kFixedWaveformScale = 0.90f;
+        const CSAMPLE_GAIN rendererCompensation = applyCompensation ? 2.0f : 1.0f;
+        *pAllGain = kFixedWaveformScale * rendererCompensation * static_cast<CSAMPLE_GAIN>(
+                                                   factory->getVisualGain(
+                                                           WaveformWidgetFactory::All));
     }
 
     if (pLowGain || pMidGain || pHighGain) {

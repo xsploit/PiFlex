@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+
+runtime_dir=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+tries=0
+while [ "$tries" -lt 120 ]; do
+    wayland_socket=$(find "$runtime_dir" -maxdepth 1 -type s -name 'wayland-*' -printf '%f\n' 2>/dev/null | head -n 1 || true)
+    if [ -n "$wayland_socket" ]; then
+        export WAYLAND_DISPLAY="$wayland_socket"
+        break
+    fi
+    tries=$((tries + 1))
+    sleep 1
+done
+
+exec /usr/bin/node /opt/pflx/edmc-companion/src/main.mjs

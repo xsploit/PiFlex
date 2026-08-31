@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BiteDJ EDMC</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header>
+    <div>
+      <p class="eyebrow">BiteDJ companion</p>
+      <h1>EDMC Downloads</h1>
+    </div>
+    <div id="overallStatus" class="status">Starting…</div>
+  </header>
+
+  <main>
+    <section>
+      <h2>1. USB destination</h2>
+      <div class="row">
+        <input id="usbRoot" type="text" autocomplete="off" placeholder="/media/piflex/MUSIC_USB">
+        <button id="saveUsb">Use USB</button>
+      </div>
+      <p id="storageStatus" class="muted">No USB selected.</p>
+    </section>
+
+    <section>
+      <h2>2. EDMC session</h2>
+      <div class="buttonRow">
+        <button id="signIn" class="primary">Open sign-in</button>
+        <button id="checkAuth">Check saved login</button>
+        <button id="closeBrowser">Close Chromium</button>
+      </div>
+      <p id="authStatus" class="muted">Not checked.</p>
+    </section>
+
+    <section>
+      <h2>3. Subsections</h2>
+      <div id="subscriptions" class="subscriptionGrid"></div>
+    </section>
+
+    <section>
+      <div class="sectionHeading">
+        <h2>Releases</h2>
+        <button id="refreshView">Refresh view</button>
+      </div>
+      <div id="releases" class="releaseList"></div>
+    </section>
+
+    <section>
+      <h2>Work queue</h2>
+      <div id="jobs" class="jobList"></div>
+    </section>
+  </main>
+
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

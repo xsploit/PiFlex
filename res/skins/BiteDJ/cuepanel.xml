@@ -12,7 +12,7 @@
 
   Closed costs nothing but the chips in the deck headers. The drawer only ever
   covers the deck strips, which are readouts — the waveforms, which are not,
-  stay put. Every page is sized 150max like the Decks group it replaces, so
+  stay put. Every page is sized 180max like the Decks group it replaces, so
   the waveform row above does not resize when the drawer opens
   (WWidgetStack forwards its minimumSizeHint to the current page).
 
@@ -23,13 +23,13 @@
 <Template>
   <WidgetStack currentpage="[Skin],cue_panel">
     <ObjectName>CuePanel_Stack</ObjectName>
-    <Size>0me,150max</Size>
+    <Size>0me,180max</Size>
     <Children>
 
       <WidgetGroup trigger="[Skin],cue_close">
         <ObjectName>Decks</ObjectName>
         <Layout>horizontal</Layout>
-        <Size>0me,150max</Size>
+        <Size>0me,180max</Size>
         <Children>
           <Template src="skin:deck.xml">
             <SetVariable name="channel">1</SetVariable>
@@ -43,7 +43,7 @@
       <WidgetGroup trigger="[Skin],cue_deck1">
         <ObjectName>CuePanel</ObjectName>
         <Layout>horizontal</Layout>
-        <Size>0me,150max</Size>
+        <Size>0me,180max</Size>
         <Children>
           <Template src="skin:templates/cue_deck_page.xml">
             <SetVariable name="channel">1</SetVariable>
@@ -54,7 +54,7 @@
       <WidgetGroup trigger="[Skin],cue_deck2">
         <ObjectName>CuePanel</ObjectName>
         <Layout>horizontal</Layout>
-        <Size>0me,150max</Size>
+        <Size>0me,180max</Size>
         <Children>
           <Template src="skin:templates/cue_deck_page.xml">
             <SetVariable name="channel">2</SetVariable>

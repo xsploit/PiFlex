@@ -23,8 +23,8 @@
 //      * BeatFX: Assigned Effect Unit 1
 //                v FX_SELECT Load next effect.
 //                SHIFT + v FX_SELECT Load previous effect.
-//                < LEFT Cycle effect focus leftward
-//                > RIGHT Cycle effect focus rightward
+//                < LEFT Select a shorter BeatFX period
+//                > RIGHT Select a longer BeatFX period
 //                ON/OFF toggles focused effect slot
 //                SHIFT + ON/OFF disables all three effect slots.
 //
@@ -293,6 +293,7 @@ PioneerDDJFLX6.bendScaleMergeFxKnop = 0.2;
 PioneerDDJFLX6.tempoRanges = [0.06, 0.10, 0.16, 0.25];
 
 PioneerDDJFLX6.shiftButtonDown = [false, false,false,false];
+PioneerDDJFLX6.jogWasPlaying = [false, false, false, false];
 
 // Jog wheel loop adjust
 PioneerDDJFLX6.loopAdjustIn = [false, false,false,false];
@@ -464,11 +465,11 @@ PioneerDDJFLX6.init = function() {
 //
 
 PioneerDDJFLX6.waveformZoom = function(midichan, control, value, status, group) {
-    if (value === 0x7f) {
-        script.triggerControl(group, "waveform_zoom_up", 100);
-    } else {
-        script.triggerControl(group, "waveform_zoom_down", 100);
-    }
+    const zoomControl = value === 0x7f ? "waveform_zoom_up" : "waveform_zoom_down";
+    // The stacked display is one visual instrument. Keep both decks at the
+    // same time scale even if Mixxx's preference was changed or reset.
+    script.triggerControl("[Channel1]", zoomControl, 100);
+    script.triggerControl("[Channel2]", zoomControl, 100);
 };
 
 //
@@ -618,6 +619,27 @@ PioneerDDJFLX6.playPositionUpdate = function(value, group){
 // Effects
 //
 
+PioneerDDJFLX6.viewPressed = function(_channel, _control, value) {
+    if (value === 0) { return; }
+
+    // The physical VIEW button is dedicated to opening Browse. BACK is a
+    // separate physical control and must never share this binding.
+    engine.setValue("[Tab]", "library", 1);
+};
+
+PioneerDDJFLX6.backPressed = function(_channel, _control, value) {
+    if (value === 0) { return; }
+
+    // BACK is global. Outside Browse it returns to Browse; once Browse is
+    // already open it pulses the library back action. BiteDJ routes that
+    // action directly to EDMC when EDMC is active, independent of Qt focus.
+    if (engine.getValue("[Tab]", "library") < 0.5) {
+        engine.setValue("[Tab]", "library", 1);
+        return;
+    }
+    script.triggerControl("[Library]", "MoveFocusBackward");
+};
+
 PioneerDDJFLX6.toggleFxLight = function(value, group, _control) {
     //const enabled = engine.getValue(PioneerDDJFLX6.focusedFxGroup(), "enabled");
     console.log("toggleFxLight group: "+group+" fxSelect: "+PioneerDDJFLX6.fxSelect);
@@ -705,24 +727,72 @@ PioneerDDJFLX6.beatFxSelectShiftPressed = function(_channel, _control, value) {
     engine.setValue(PioneerDDJFLX6.focusedFxGroup(), "prev_effect", value);
 };
 
+// Raw values used by BiteDJ's on-screen BeatFX bucket picker. They represent
+// periods of 1/8, 1/4, 1/2, 1, 2 and 4 beats respectively for rate-semantic
+// parameters. Keeping the controller on these same values keeps the hardware
+// Beat buttons and the highlighted touchscreen bucket in sync.
+PioneerDDJFLX6.beatFxBucketValues = [8, 4, 2, 1, 0.5, 0.25];
+
+PioneerDDJFLX6.focusedFxBeatParameter = function() {
+    const group = PioneerDDJFLX6.focusedFxGroup();
+    for (let parameter = 1; parameter <= 16; ++parameter) {
+        const prefix = "parameter" + parameter;
+        const loaded = engine.getValue(group, prefix + "_loaded") > 0.5;
+        // UnitsHint::Beats is exposed as 1 by the BiteDJ fork.
+        const isBeats = Math.round(engine.getValue(group, prefix + "_units")) === 1;
+        if (loaded && isBeats) {
+            return prefix;
+        }
+    }
+    return "";
+};
+
+PioneerDDJFLX6.changeBeatFxPeriodBy = function(numberOfSteps) {
+    const group = PioneerDDJFLX6.focusedFxGroup();
+    const parameter = PioneerDDJFLX6.focusedFxBeatParameter();
+    if (parameter === "") {
+        return;
+    }
+
+    const minimum = engine.getValue(group, parameter + "_min");
+    const maximum = engine.getValue(group, parameter + "_max");
+    const values = PioneerDDJFLX6.beatFxBucketValues.filter(function(candidate) {
+        return candidate >= minimum - 0.000001 && candidate <= maximum + 0.000001;
+    });
+    if (values.length === 0) {
+        return;
+    }
+
+    const current = engine.getValue(group, parameter + "_value");
+    let nearestIndex = 0;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (let index = 0; index < values.length; ++index) {
+        const distance = current > 0
+                ? Math.abs(Math.log(current / values[index]))
+                : Math.abs(current - values[index]);
+        if (distance < nearestDistance) {
+            nearestDistance = distance;
+            nearestIndex = index;
+        }
+    }
+
+    const newIndex = Math.max(0,
+            Math.min(values.length - 1, nearestIndex + numberOfSteps));
+    engine.setValue(group, parameter + "_value", values[newIndex]);
+};
+
 PioneerDDJFLX6.beatFxLeftPressed = function(_channel, _control, value) {
     if (value === 0) { return; }
 
-    //PioneerDDJFLX6.changeFocusedEffectBy(-1);
-    if(this.fxSelect == "")
-        return;
-
-    engine.setValue(this.fxSelect,"effect_selector",-1);
+    // Move from 1 beat toward 1/2, 1/4, etc. The raw rate values above are
+    // inverse to the displayed period, so shorter periods are lower indexes.
+    PioneerDDJFLX6.changeBeatFxPeriodBy(-1);
 };
 
 PioneerDDJFLX6.beatFxRightPressed = function(_channel, _control, value) {
     if (value === 0) { return; }
 
-    //PioneerDDJFLX6.changeFocusedEffectBy(1);
-    if(this.fxSelect == "")
-        return;
-    console.log("beatFxRightPressed fxSelected: "+this.fxSelect);
-    engine.setValue(this.fxSelect,"effect_selector",1);
+    PioneerDDJFLX6.changeBeatFxPeriodBy(1);
 };
 
 PioneerDDJFLX6.beatFxOnOffPressed = function(_channel, _control, value) {
@@ -1221,7 +1291,7 @@ PioneerDDJFLX6.jogSearch = function(_channel, _control, value, _status, group) {
     engine.setValue(group, "jog", newVal);
 };
 
-PioneerDDJFLX6.jogTouch = function(channel, _control, value) {
+PioneerDDJFLX6.jogTouch = function(channel, _control, value, _status, group) {
     const deckNum = channel + 1;
 
     // skip while adjusting the loop points
@@ -1229,10 +1299,26 @@ PioneerDDJFLX6.jogTouch = function(channel, _control, value) {
         return;
     }
 
+    // SHIFT+jog is mapped to fast search. Do not enable the scratch engine at
+    // the same time or the deck can remain held at scratch speed after seeking.
+    if (PioneerDDJFLX6.shiftButtonDown[channel]) {
+        if (value === 0 && engine.isScratching(deckNum)) {
+            engine.scratchDisable(deckNum, false);
+        }
+        return;
+    }
+
     if (value !== 0 && this.vinylMode) {
-        engine.scratchEnable(deckNum, 720*10, 33+1/3, this.alpha, this.beta);
+        PioneerDDJFLX6.jogWasPlaying[channel] = engine.getValue(group, "play") > 0;
+        engine.scratchEnable(deckNum, 720*10, 33+1/3, this.alpha, this.beta, false);
     } else {
-        engine.scratchDisable(deckNum);
+        // Rekordbox-style release: return to normal playback immediately
+        // instead of letting the scratch ramp leave the deck sounding stopped.
+        engine.scratchDisable(deckNum, false);
+        if (PioneerDDJFLX6.jogWasPlaying[channel] && engine.getValue(group, "play") === 0) {
+            engine.setValue(group, "play", 1);
+        }
+        PioneerDDJFLX6.jogWasPlaying[channel] = false;
     }
 };
 

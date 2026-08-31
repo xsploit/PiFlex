@@ -1,0 +1,17 @@
+{
+  "name": "bitedj-edmc-companion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Standalone EDMC acquisition companion for BiteDJ on Raspberry Pi OS",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/main.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright-core": "^1.55.0"
+  }
+}

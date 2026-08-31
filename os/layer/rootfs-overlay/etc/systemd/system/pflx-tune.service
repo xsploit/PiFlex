@@ -1,0 +1,13 @@
+[Unit]
+Description=Apply PFLX real-time CPU and USB audio tuning
+After=systemd-udev-settle.service local-fs.target
+Before=pflx-session.service
+Wants=systemd-udev-settle.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/pflx-tune
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

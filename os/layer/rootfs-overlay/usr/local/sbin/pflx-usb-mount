@@ -1,0 +1,51 @@
+#!/bin/sh
+set -eu
+
+action=${1:?add or remove required}
+device=${2:?block device required}
+user=@PIFLEX_USER@
+base="/media/$user"
+
+case "$device" in
+    /dev/*) ;;
+    *) echo "PFLX: refusing non-device path $device" >&2; exit 1 ;;
+esac
+
+rootdev=$(findmnt -nro SOURCE / 2>/dev/null || true)
+[ "$device" != "$rootdev" ] || { echo 'PFLX: refusing root device' >&2; exit 1; }
+
+existing=$(findmnt -nro TARGET --source "$device" 2>/dev/null || true)
+if [ "$action" = remove ]; then
+    [ -z "$existing" ] || umount "$existing"
+    exit 0
+fi
+
+[ "$action" = add ] || { echo "PFLX: unknown action $action" >&2; exit 2; }
+[ -b "$device" ] || exit 0
+[ -z "$existing" ] || exit 0
+
+fstype=$(blkid -s TYPE -o value "$device" 2>/dev/null || true)
+[ -n "$fstype" ] || exit 0
+label=$(blkid -s LABEL -o value "$device" 2>/dev/null || true)
+[ -n "$label" ] || label=$(basename "$device")
+label=$(printf '%s' "$label" | tr -cs 'A-Za-z0-9._-' '_')
+target="$base/$label"
+
+install -d -o "$user" -g "$user" "$base" "$target"
+case "$fstype" in
+    vfat|exfat|ntfs|ntfs3)
+        uid=$(id -u "$user")
+        gid=$(id -g "$user")
+        mount -t "$fstype" -o "rw,nosuid,nodev,noexec,uid=$uid,gid=$gid,umask=0022" "$device" "$target"
+        ;;
+    ext2|ext3|ext4|btrfs)
+        mount -t "$fstype" -o rw,nosuid,nodev "$device" "$target"
+        ;;
+    *)
+        echo "PFLX: unsupported removable filesystem $fstype" >&2
+        rmdir "$target" 2>/dev/null || true
+        exit 0
+        ;;
+esac
+
+echo "PFLX: mounted $device at $target"

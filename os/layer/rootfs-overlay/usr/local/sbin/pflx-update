@@ -1,0 +1,50 @@
+#!/bin/sh
+set -eu
+
+bundle=${1:?usage: pflx-update /path/to/pflx-update.tar.gz}
+test -f "$bundle"
+test -f "$bundle.sha256"
+
+expected=$(awk 'NR == 1 { print $1 }' "$bundle.sha256")
+actual=$(sha256sum "$bundle" | awk '{ print $1 }')
+test "$expected" = "$actual"
+
+stage=$(mktemp -d /var/tmp/pflx-update.XXXXXX)
+trap 'rm -rf "$stage"' EXIT INT TERM
+
+tar -tzf "$bundle" | while IFS= read -r path; do
+    case "$path" in
+        payload/|payload/usr/|payload/usr/local/|payload/usr/local/share/|payload/opt/|payload/opt/pflx/) ;;
+        payload/usr/local/bin/*|payload/usr/local/share/mixxx/*|payload/opt/pflx/edmc-companion/*|manifest.txt) ;;
+        *) printf 'Refusing unexpected update path: %s\n' "$path" >&2; exit 1 ;;
+    esac
+    case "/$path/" in */../*|*/./*) printf 'Refusing unsafe update path: %s\n' "$path" >&2; exit 1 ;; esac
+done
+
+tar -xzf "$bundle" -C "$stage" --no-same-owner --no-same-permissions
+if find "$stage" -type l -print -quit | grep -q .; then
+    echo 'Refusing an update bundle containing symbolic links' >&2
+    exit 1
+fi
+test -f "$stage/manifest.txt"
+test -x "$stage/payload/usr/local/bin/mixxx"
+
+stamp=$(date -u +%Y%m%dT%H%M%SZ)
+backup="/var/backups/pflx/$stamp"
+install -d "$backup/usr/local" "$backup/opt/pflx"
+cp -a /usr/local/bin "$backup/usr/local/" 2>/dev/null || true
+cp -a /usr/local/share "$backup/usr/local/" 2>/dev/null || true
+cp -a /opt/pflx/edmc-companion "$backup/opt/pflx/" 2>/dev/null || true
+ln -sfn "$backup" /var/backups/pflx/latest
+
+install -m 0755 "$stage/payload/usr/local/bin/mixxx" /usr/local/bin/mixxx
+rsync -a --delete "$stage/payload/usr/local/share/mixxx/" /usr/local/share/mixxx/
+rsync -a --delete "$stage/payload/opt/pflx/edmc-companion/" /opt/pflx/edmc-companion/
+chown -R root:root /opt/pflx/edmc-companion
+find /opt/pflx/edmc-companion -type d -exec chmod 0755 {} +
+find /opt/pflx/edmc-companion -type f -exec chmod 0644 {} +
+find /opt/pflx/edmc-companion/node_modules/.bin -type f -exec chmod 0755 {} + 2>/dev/null || true
+
+systemctl restart pflx-edmc.service
+pkill -TERM -x mixxx 2>/dev/null || true
+printf 'Installed PFLX update %s; backup is %s\n' "$(cat "$stage/manifest.txt")" "$backup"

@@ -1,0 +1,24 @@
+#!/bin/sh
+set -u
+
+echo '=== PFLX release ==='
+cat /etc/os-release
+echo '=== Kernel ==='
+uname -a
+echo '=== CPU ==='
+grep -E 'model name|Hardware|Revision' /proc/cpuinfo 2>/dev/null || true
+echo '=== Scheduling ==='
+sysctl kernel.sched_rt_runtime_us 2>/dev/null || true
+ps -eLo pid,tid,cls,rtprio,pri,psr,comm --sort=-rtprio | head -40
+echo '=== Sound ==='
+aplay -l 2>/dev/null || true
+cat /proc/asound/cards 2>/dev/null || true
+echo '=== USB ==='
+lsusb 2>/dev/null || true
+echo '=== Mounts ==='
+findmnt -rno TARGET,SOURCE,FSTYPE,OPTIONS | head -80
+echo '=== Temperature and throttling ==='
+vcgencmd measure_temp 2>/dev/null || true
+vcgencmd get_throttled 2>/dev/null || true
+echo '=== Recent PFLX journal ==='
+journalctl -b -u pflx-tune -u pflx-session -u pflx-edmc --no-pager -n 120

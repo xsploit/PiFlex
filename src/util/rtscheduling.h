@@ -5,12 +5,10 @@ namespace mixxx {
 // SCHED_FIFO priorities for the app's latency-critical threads. These must
 // stay below the audio/USB IRQ threads. The hardware interrupt handling
 // must always be able to preempt us, the audio callback must preempt
-// everything else in the app, and controller input must preempt the main
-// (GUI) thread, which in turn sits above everything left on SCHED_OTHER
-// (analysis, library workers).
+// everything else in the app. GUI, rendering, analysis, and library workers
+// remain on SCHED_OTHER so they cannot starve the compositor.
 constexpr int kRtPrioAudioEngine = 70;
 constexpr int kRtPrioControllerInput = 50;
-constexpr int kRtPrioMainThread = 49;
 
 /// Best-effort promotion of the calling thread to the real-time SCHED_FIFO
 /// policy on Linux. QThread priorities are ignored by the default Linux

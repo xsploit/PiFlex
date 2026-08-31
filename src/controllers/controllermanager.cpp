@@ -158,6 +158,7 @@ void ControllerManager::slotInitialize() {
     // rendering for a scheduler timeslice.
     mixxx::promoteCurrentThreadToRealtime(
             mixxx::kRtPrioControllerInput, "Controller");
+    mixxx::pinCurrentThreadToCpuFromEnv("CONTROLLER_CPU", "Controller");
 
     // Initialize mapping info parsers. This object is only for use in the main
     // thread. Do not touch it from within ControllerManager.

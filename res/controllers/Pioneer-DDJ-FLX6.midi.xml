@@ -613,7 +613,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJFLX6.beatFxLeftPressed</key>
-                <description>BEAT LEFT - press - select previous effect unit</description>
+                <description>BEAT LEFT - press - select shorter Beat FX period</description>
                 <status>0x94</status>
                 <midino>0x06</midino>
                 <options>
@@ -623,7 +623,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJFLX6.beatFxLeftPressed</key>
-                <description>BEAT LEFT - press - select previous effect unit</description>
+                <description>BEAT LEFT - press - select shorter Beat FX period</description>
                 <status>0x95</status>
                 <midino>0x06</midino>
                 <options>
@@ -733,7 +733,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJFLX6.beatFxRightPressed</key>
-                <description>BEAT RIGHT - press - select next effect unit</description>
+                <description>BEAT RIGHT - press - select longer Beat FX period</description>
                 <status>0x94</status>
                 <midino>0x07</midino>
                 <options>
@@ -743,7 +743,7 @@
             <control>
                 <group>[EffectRack1_EffectUnit1]</group>
                 <key>PioneerDDJFLX6.beatFxRightPressed</key>
-                <description>BEAT RIGHT - press - select next effect unit</description>
+                <description>BEAT RIGHT - press - select longer Beat FX period</description>
                 <status>0x95</status>
                 <midino>0x07</midino>
                 <options>
@@ -3728,8 +3728,18 @@
             </control>
             <control>
                 <group>[Tab]</group>
+                <key>PioneerDDJFLX6.backPressed</key>
+                <description>BACK - press - Return to Browse or go back in the active browser</description>
+                <status>0x96</status>
+                <midino>0x65</midino>
+                <options>
+                    <script-binding/>
+                </options>
+            </control>
+            <control>
+                <group>[Tab]</group>
                 <key>library</key>
-                <description>VIEW - press - Open the Browse tab</description>
+                <description>VIEW - press - Open the Browse page</description>
                 <status>0x96</status>
                 <midino>0x7A</midino>
                 <options>

@@ -1,0 +1,32 @@
+[Unit]
+Description=PiFlex EDMC acquisition companion
+After=network-online.target local-fs.target pflx-session.service
+Wants=network-online.target pflx-session.service
+
+[Service]
+Type=simple
+User=@PIFLEX_USER@
+Group=@PIFLEX_USER@
+WorkingDirectory=/opt/pflx/edmc-companion
+Environment=HOME=/home/@PIFLEX_USER@
+Environment=XDG_DATA_HOME=/home/@PIFLEX_USER@/.local/share
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=BITEDJ_EDMC_CHROMIUM=/usr/bin/chromium
+ExecStart=/usr/local/bin/start-pflx-edmc
+Restart=on-failure
+RestartSec=3
+Nice=15
+IOSchedulingClass=idle
+CPUWeight=10
+IOWeight=10
+CPUAffinity=0 1
+OOMScoreAdjust=500
+MemoryHigh=1200M
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/@PIFLEX_USER@ /media -/run/user/1000
+
+[Install]
+WantedBy=graphical.target

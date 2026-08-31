@@ -1,0 +1,60 @@
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --panel: #14181d;
+  --panel-2: #1b2128;
+  --text: #f4f7fa;
+  --muted: #aab4bf;
+  --line: #2d3742;
+  --accent: #2fd59d;
+  --accent-ink: #05251a;
+  --danger: #ff6f76;
+  font-family: Inter, system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-size: 18px; }
+header { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 28px; background: rgba(11, 13, 16, .95); border-bottom: 1px solid var(--line); }
+h1, h2, p { margin-top: 0; }
+h1 { margin-bottom: 0; font-size: 30px; }
+h2 { font-size: 22px; }
+.eyebrow { margin-bottom: 3px; color: var(--accent); font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+main { width: min(1180px, 100%); margin: 0 auto; padding: 22px; display: grid; gap: 18px; }
+section { padding: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+.row, .buttonRow, .sectionHeading { display: flex; align-items: center; gap: 12px; }
+.sectionHeading { justify-content: space-between; }
+input, button { min-height: 50px; border-radius: 9px; font: inherit; }
+input { flex: 1; min-width: 0; padding: 0 14px; color: var(--text); background: #090b0e; border: 1px solid var(--line); }
+button { padding: 0 18px; color: var(--text); background: var(--panel-2); border: 1px solid #3b4652; font-weight: 700; cursor: pointer; }
+button:hover, button:focus-visible { border-color: var(--accent); outline: none; }
+button.primary { color: var(--accent-ink); background: var(--accent); border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+.muted { color: var(--muted); margin-bottom: 0; }
+.status { padding: 9px 13px; color: var(--muted); background: var(--panel); border-radius: 999px; }
+.subscriptionGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.subscription { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 12px; background: var(--panel-2); border-radius: 10px; }
+.subscription label { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+.subscription input { flex: none; width: 26px; min-height: 26px; }
+.subscription button { min-height: 42px; padding: 0 12px; }
+.releaseList, .jobList { display: grid; gap: 10px; }
+.release, .job { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 13px 15px; background: var(--panel-2); border-radius: 10px; }
+.release h3, .job strong { margin: 0 0 4px; font-size: 17px; }
+.release p, .job p { margin: 0; color: var(--muted); font-size: 14px; }
+.releaseActions { display: flex; gap: 8px; }
+.releaseActions button { min-height: 42px; padding: 0 12px; }
+.downloaded { color: var(--accent) !important; }
+.failed { color: var(--danger) !important; }
+progress { width: min(240px, 35vw); height: 12px; accent-color: var(--accent); }
+#toast { position: fixed; right: 20px; bottom: 20px; max-width: min(500px, calc(100vw - 40px)); padding: 13px 16px; color: var(--text); background: #222a33; border: 1px solid var(--line); border-radius: 10px; opacity: 0; transform: translateY(10px); transition: .2s; pointer-events: none; }
+#toast.visible { opacity: 1; transform: translateY(0); }
+
+@media (max-width: 700px) {
+  body { font-size: 16px; }
+  header { padding: 14px 16px; }
+  main { padding: 12px; }
+  section { padding: 15px; }
+  .row, .buttonRow { align-items: stretch; flex-direction: column; }
+  .row > *, .buttonRow > * { width: 100%; }
+  .release, .job { grid-template-columns: 1fr; }
+  .releaseActions { display: grid; grid-template-columns: 1fr 1fr; }
+}

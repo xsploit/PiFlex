@@ -1,0 +1,36 @@
+#!/bin/sh
+set -u
+
+settings="$HOME/.mixxx"
+resource=/usr/local/share/mixxx
+logdir="$HOME/.local/state/pflx"
+mkdir -p "$settings" "$logdir"
+
+crashes=0
+while :; do
+    stamp=$(date -u +%Y%m%dT%H%M%SZ)
+    logfile="$logdir/bitedj-$stamp.log"
+    echo "PFLX: starting BiteDJ; log $logfile"
+
+    taskset -c 0,1,2 /usr/local/bin/mixxx \
+        --settings-path "$settings" \
+        --resource-path "$resource" \
+        --log-level warning >>"$logfile" 2>&1
+    status=$?
+    crashes=$((crashes + 1))
+    echo "PFLX: BiteDJ exited with status $status" | tee -a "$logfile"
+
+    if [ "$crashes" -ge 3 ]; then
+        printf '%s\n' "$logfile" > "$logdir/last-crash-log"
+        foot --fullscreen sh -lc '
+            clear
+            printf "PFLX recovery mode\n\n"
+            printf "BiteDJ exited three times. Networking and SSH remain active.\n"
+            printf "Press Enter to retry BiteDJ, or Ctrl+Alt+T for a shell.\n\n"
+            read answer
+        ' || true
+        crashes=0
+    else
+        sleep 2
+    fi
+done

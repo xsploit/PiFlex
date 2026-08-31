@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=EDMC Downloads
+Comment=Browse and download EDMC releases for BiteDJ
+Exec=sh -c "curl --silent --show-error --request POST http://127.0.0.1:17642/v1/ui/open"
+Icon=audio-x-generic
+Terminal=false
+Categories=AudioVideo;Audio;

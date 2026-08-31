@@ -1,0 +1,24 @@
+#!/bin/sh
+set -eu
+
+runtime=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+if [ ! -d "$runtime" ]; then
+    echo "PFLX: missing runtime directory $runtime" >&2
+    exit 1
+fi
+
+export XDG_RUNTIME_DIR="$runtime"
+export QT_QPA_PLATFORM=wayland
+export QT_ENABLE_HIGHDPI_SCALING=0
+export XCURSOR_SIZE=1
+
+# Touch Display 2 is a separate RP1 DSI DRM device while V3D lives behind the
+# VC4 DRM/render nodes. If wlroots chooses the DSI card as its primary device,
+# Wayland clients are advertised a software-only EGL path and BiteDJ falls back
+# to llvmpipe. Make VC4/V3D the renderer/primary GPU and use RP1 DSI only as the
+# output device so Qt can submit waveform rendering to the Pi 5 GPU.
+export WLR_RENDERER=gles2
+export WLR_RENDER_DRM_DEVICE=/dev/dri/renderD128
+export WLR_DRM_DEVICES=/dev/dri/card2:/dev/dri/card0
+
+exec dbus-run-session sway --config /etc/sway/pflx.conf

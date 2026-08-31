@@ -1,0 +1,20 @@
+[Unit]
+Description=BiteDJ EDMC acquisition companion
+After=network-online.target graphical-session.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node %h/.local/lib/bitedj-edmc/src/main.mjs
+Environment=BITEDJ_EDMC_CHROMIUM=/usr/bin/chromium
+Restart=on-failure
+RestartSec=3
+Nice=10
+CPUWeight=20
+IOWeight=20
+MemoryHigh=1200M
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=default.target
