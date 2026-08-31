@@ -1,9 +1,14 @@
 # PiFlex OS
 
-This directory contains the reproducible Raspberry Pi 5 image layer used by
-PiFlex. It is based on Debian 13 arm64 and Raspberry Pi `rpi-image-gen` v2.6.0.
-No prebuilt image, BiteDJ binary bundle, password, or SSH credential is stored
-in this repository.
+This directory is the reproducible PiFlex OS image definition. It turns a
+Debian 13 arm64 `minbase` filesystem into the complete Raspberry Pi 5 DJ
+appliance: boot configuration, touch kiosk, audio/controller priorities,
+networking, removable media, EDMC, recovery, updates, rollback, and BiteDJ.
+It is built with Raspberry Pi `rpi-image-gen` v2.6.0.
+
+Large prebuilt images and private per-device configuration are distributed
+separately from the Git source. No password, private key, account session, or
+music library belongs in a public image.
 
 The current image profile includes:
 

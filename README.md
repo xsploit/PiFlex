@@ -1,9 +1,18 @@
-# PiFlex
+# PiFlex OS
 
-PiFlex is an experimental, Raspberry Pi-based standalone DJ platform built on
-[BiteDJ](https://github.com/TeamDeckshark/bitedj), which is itself based on
-[Mixxx](https://mixxx.org/). The name refers to a flexible Pi DJ system, not a
-claim that every controller or Raspberry Pi model is already supported.
+PiFlex OS is a custom, performance-focused Raspberry Pi operating-system image
+for standalone DJ hardware. It boots directly into a touch-first DJ interface
+and replaces a general-purpose desktop with a deliberately small kiosk,
+audio, controller, removable-media, networking, recovery, and update stack.
+
+[BiteDJ](https://github.com/TeamDeckshark/bitedj), itself based on
+[Mixxx](https://mixxx.org/), is the DJ engine inside the image. PiFlex is not
+just a BiteDJ skin or controller mapping. This repository contains the complete
+PiFlex OS image recipe and runtime layer as well as the modified BiteDJ source
+and EDMC companion used by that image.
+
+The name refers to a flexible Pi DJ system, not a claim that every controller
+or Raspberry Pi model is already supported.
 
 The current development target is:
 
@@ -12,9 +21,34 @@ The current development target is:
 - Pioneer DDJ-FLX6
 - USB media exported by Rekordbox
 
+## Why a custom OS?
+
+PiFlex OS exists to give live audio predictable access to the Pi instead of
+running BiteDJ on top of a normal desktop installation. The current image:
+
+- starts from Debian 13 arm64 `minbase`, not Raspberry Pi OS Desktop
+- boots straight into a minimal Sway/Wayland kiosk with Xwayland disabled
+- uses direct ALSA with no PulseAudio or PipeWire server
+- runs the CPU governor in performance mode and disables swap during a set
+- reserves CPU 3 for BiteDJ's audio callback and CPU 2 for controller/USB work
+- moves USB-host interrupts to CPU 2 and applies real-time priority when the
+  running kernel exposes threaded IRQs
+- gives the BiteDJ session real-time and locked-memory limits
+- confines EDMC/Chromium work to CPUs 0-1 at low CPU and idle I/O priority
+- disables unattended package timers and unnecessary background maintenance
+- bounds persistent logs so they cannot gradually fill the card
+- automounts DJ USB media and expands the root filesystem on first boot
+- provides SSH, mDNS, recovery shortcuts, application updates, and rollback
+
+The development image compresses to about 653 MB and expands to a roughly
+5.7 GB flashable image. Chromium and networking remain available because EDMC
+authentication and field recovery are explicit PiFlex requirements; they are
+kept outside the real-time audio process.
+
 ## Current status
 
-PiFlex is a developer preview, not a finished appliance image.
+PiFlex OS is a working developer image for the target hardware below. It is not
+yet a broadly supported appliance release.
 
 Verified on the target system:
 
@@ -37,19 +71,23 @@ Not yet proven:
 
 - A 30-minute two-deck run with measured zero xruns
 - Safe analysis and EDMC downloading under worst-case live load
-- The optional PREEMPT_RT kernel on the complete hardware stack
+- The staged PREEMPT_RT kernel on the complete display, USB, and audio stack.
+  The current image boots the packaged Pi 5 kernel first so recovery remains
+  available; the RT kernel is a measured follow-up test, not a performance
+  claim.
 - Controllers, displays, or Raspberry Pi boards other than the target above
-- A supported end-user image/update channel
+- A stable, supported end-user image/update channel
 
 ## Repository layout
 
+- `os/` is the PiFlex OS image definition: Debian package layer, Pi 5 display
+  setup, kiosk, service priorities, CPU/IRQ tuning, recovery, USB mounting,
+  updates, rollback, diagnostics, and optional RT-kernel configuration.
 - BiteDJ source and the PiFlex modifications live at the repository root.
 - `res/controllers/Pioneer-DDJ-FLX6*` contains the current FLX6 profile.
 - `src/library/edmc/` contains BiteDJ's asynchronous EDMC client UI.
 - `edmc-companion/` contains the Node.js/Playwright acquisition service. Browser,
   network, and download work stay outside the real-time audio process.
-- `os/` contains the Pi 5 image layer, kiosk services, performance tuning,
-  diagnostics, update tooling, and an optional RT-kernel configuration.
 - `docs/BITEDJ-UPSTREAM.md` preserves BiteDJ's upstream project description.
 
 ## Controller scope
@@ -59,13 +97,16 @@ fully targeted profile today. Additional mappings are welcome, but their
 presence in upstream Mixxx or BiteDJ does not mean they have been tested on
 PiFlex hardware.
 
-## Building
+## Building the image
 
-Build BiteDJ using the upstream Linux instructions, with this repository as the
-source tree. The PiFlex image tooling is documented in [`os/README.md`](os/README.md).
-The image build expects an ARM64 BiteDJ rootfs bundle and requires you to create
-`os/config/piflex-os.yaml` from the provided example with your own SSH public
-key.
+The complete image workflow is documented in [`os/README.md`](os/README.md).
+It uses Raspberry Pi `rpi-image-gen`, this repository's PiFlex OS layer, and an
+ARM64 BiteDJ rootfs bundle. Create `os/config/piflex-os.yaml` from the public
+example with your own username and SSH public key, prepare the application
+assets, and build the flashable image from WSL/Linux.
+
+Build BiteDJ using the upstream Linux instructions with this repository as the
+source tree when producing a new application bundle.
 
 The EDMC companion requires Node.js 20 or newer:
 
