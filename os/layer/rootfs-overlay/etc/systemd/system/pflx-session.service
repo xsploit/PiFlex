@@ -14,6 +14,7 @@ Environment=QT_QPA_PLATFORM=wayland
 Environment=QT_ENABLE_HIGHDPI_SCALING=0
 Environment=ENGINE_CPU=3
 Environment=CONTROLLER_CPU=2
+Environment=BACKGROUND_CPUS=0,1
 TTYPath=/dev/tty1
 StandardInput=tty
 StandardOutput=journal

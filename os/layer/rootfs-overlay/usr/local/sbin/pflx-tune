@@ -31,4 +31,25 @@ for action in /proc/irq/*/actions; do
     fi
 done
 
+# On Raspberry Pi's PREEMPT_RT kernel the RP1 USB IRQ action files may be
+# empty even though the schedulable IRQ threads are named for xHCI. Discover
+# those threads directly as a fallback so the RT kernel actually receives the
+# CPU and priority layout PiFlex promises.
+for task in /proc/[0-9]*/task/[0-9]*/comm; do
+    [ -r "$task" ] || continue
+    name=$(cat "$task")
+    case "$name" in
+        irq/[0-9]*-*xhci*|irq/[0-9]*-*usb*|irq/[0-9]*-*dwc*)
+            irq=${name#irq/}
+            irq=${irq%%-*}
+            tid=${task%/comm}
+            tid=${tid##*/}
+            [ -w "/proc/irq/$irq/smp_affinity" ] && \
+                printf '%s\n' 4 > "/proc/irq/$irq/smp_affinity" || true
+            taskset -pc 2 "$tid" >/dev/null 2>&1 || true
+            chrt -f -p 85 "$tid" >/dev/null 2>&1 || true
+            ;;
+    esac
+done
+
 echo 'PFLX: performance governor, no swap, and USB IRQ tuning applied'

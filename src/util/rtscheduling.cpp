@@ -102,6 +102,59 @@ bool pinCurrentThreadToCpuFromEnv(const char* envVar, const char* threadName) {
 #endif
 }
 
+bool pinCurrentThreadToCpuListFromEnv(const char* envVar, const char* threadName) {
+#ifdef __LINUX__
+    const char* value = std::getenv(envVar);
+    if (value == nullptr || *value == '\0') {
+        return false;
+    }
+
+    cpu_set_t set;
+    CPU_ZERO(&set);
+    const char* cursor = value;
+    int cpuCount = 0;
+    while (*cursor != '\0') {
+        while (*cursor == ' ' || *cursor == '\t') {
+            ++cursor;
+        }
+        char* end = nullptr;
+        const long cpu = std::strtol(cursor, &end, 10);
+        if (end == cursor || cpu < 0 || cpu >= CPU_SETSIZE) {
+            qWarning() << "Ignoring invalid CPU list in" << envVar << ":" << value;
+            return false;
+        }
+        CPU_SET(static_cast<int>(cpu), &set);
+        ++cpuCount;
+        cursor = end;
+        while (*cursor == ' ' || *cursor == '\t') {
+            ++cursor;
+        }
+        if (*cursor == ',') {
+            ++cursor;
+        } else if (*cursor != '\0') {
+            qWarning() << "Ignoring invalid CPU list in" << envVar << ":" << value;
+            return false;
+        }
+    }
+
+    if (cpuCount == 0) {
+        return false;
+    }
+    const int err = pthread_setaffinity_np(pthread_self(), sizeof(set), &set);
+    if (err == 0) {
+        qInfo() << "Thread" << threadName << "pinned using" << envVar << value;
+        return true;
+    }
+    qWarning() << "Failed to pin thread" << threadName << "using" << envVar
+               << value << ":" << strerror(err);
+    return false;
+#else
+    Q_UNUSED(envVar);
+    Q_UNUSED(threadName);
+    return false;
+#endif
+}
+
 bool lockAllMemory() {
 #ifdef __LINUX__
     if (mlockall(MCL_CURRENT | MCL_FUTURE | MCL_ONFAULT) == 0) {

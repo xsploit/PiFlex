@@ -67,7 +67,14 @@ for unit in pflx-grow-root.service pflx-tune.service pflx-session.service pflx-e
 done
 systemctl --root="$rootfs" set-default graphical.target
 
-for unit in apt-daily.timer apt-daily-upgrade.timer e2scrub_all.timer fstrim.timer; do
+for unit in apt-daily.timer apt-daily-upgrade.timer dpkg-db-backup.timer \
+        e2scrub_all.timer fstrim.timer man-db.timer; do
+    systemctl --root="$rootfs" disable "$unit" 2>/dev/null || true
+done
+
+# Keep Bluetooth available for optional peripherals, but leave its daemon and
+# UART helper stopped by default so the DJ appliance pays no runtime cost.
+for unit in bluetooth.service hciuart.service; do
     systemctl --root="$rootfs" disable "$unit" 2>/dev/null || true
 done
 

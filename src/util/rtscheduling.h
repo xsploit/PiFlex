@@ -40,6 +40,12 @@ bool demoteCurrentThreadToIdle(const char* threadName);
 /// by the environment variable envVar, if it is set. 
 bool pinCurrentThreadToCpuFromEnv(const char* envVar, const char* threadName);
 
+/// Pin the calling thread to the comma-separated CPU list stored in envVar.
+/// This is used for non-real-time workers that must be kept away from the
+/// dedicated controller/USB and audio cores without collapsing all background
+/// work onto a single CPU.
+bool pinCurrentThreadToCpuListFromEnv(const char* envVar, const char* threadName);
+
 /// Best-effort mlockall() so no page of the process can be reclaimed once it
 /// has been touched (MCL_ONFAULT: pages are locked on first fault instead of
 /// being faulted in upfront, which keeps a Qt application from wiring

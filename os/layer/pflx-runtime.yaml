@@ -20,6 +20,7 @@ mmdebstrap:
     - alsa-utils
     - avahi-daemon
     - brightnessctl
+    - bluez
     - ca-certificates
     - chromium
     - cloud-guest-utils
@@ -37,6 +38,7 @@ mmdebstrap:
     - nodejs
     - npm
     - ntfs-3g
+    - pi-bluetooth
     - polkitd
     - pkexec
     - qt6-qpa-plugins

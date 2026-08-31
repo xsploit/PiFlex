@@ -11,6 +11,7 @@
 #include "util/event.h"
 #include "util/fifo.h"
 #include "util/logger.h"
+#include "util/rtscheduling.h"
 #include "util/span.h"
 
 namespace {
@@ -102,6 +103,13 @@ void CachingReaderWorker::newTrack(TrackPointer pTrack) {
 }
 
 void CachingReaderWorker::run() {
+    // QThreads inherit the creator's CPU affinity on Linux. Controller setup
+    // may create these readers after its own thread has been pinned to the
+    // dedicated USB/controller core, so reset readers to the background CPU
+    // set before they decode or read track data.
+    mixxx::pinCurrentThreadToCpuListFromEnv(
+            "BACKGROUND_CPUS", "CachingReaderWorker");
+
     // the id of this thread, for debugging purposes
     static auto lastId = QAtomicInt(0);
     const auto id = lastId.fetchAndAddRelaxed(1) + 1;
