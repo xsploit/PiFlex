@@ -130,7 +130,9 @@ bool createLibraryTable(QSqlDatabase& database, const QString& tableName) {
             // device's own database said, so Settings -> Clear -> Meta can put
             // it back without re-parsing the PDB.
             "    source_rating INTEGER,"
-            "    analyze_path TEXT UNIQUE,"
+            // Different tracks may legitimately refer to the same analysis
+            // file. The audio location is the unique identity of a track.
+            "    analyze_path TEXT,"
             "    device TEXT,"
             "    color INTEGER"
             ");");
@@ -415,7 +417,28 @@ mixxx::RgbColor colorFromID(int colorID) {
     return kColorForIDNoColor;
 }
 
-void insertTrack(
+int findTrackId(QSqlDatabase& database, int rbID, const QString& device) {
+    QSqlQuery finderQuery(database);
+    finderQuery.prepare("select id from " + kRekordboxLibraryTable +
+            " where rb_id=:rb_id and device=:device");
+    finderQuery.bindValue(":rb_id", rbID);
+    finderQuery.bindValue(":device", device);
+
+    if (!finderQuery.exec()) {
+        LOG_FAILED_QUERY(finderQuery)
+                << "rbID:" << rbID
+                << "device:" << device;
+        return -1;
+    }
+
+    if (!finderQuery.next()) {
+        return -1;
+    }
+
+    return finderQuery.value(finderQuery.record().indexOf("id")).toInt();
+}
+
+bool insertTrack(
         QSqlDatabase& database,
         rekordbox_pdb_t::track_row_t* track,
         QSqlQuery& query,
@@ -471,22 +494,16 @@ void insertTrack(
 
     if (!query.exec()) {
         LOG_FAILED_QUERY(query);
+        return false;
     }
 
-    int trackID = -1;
-    QSqlQuery finderQuery(database);
-    finderQuery.prepare("select id from " + kRekordboxLibraryTable +
-            " where rb_id=:rb_id and device=:device");
-    finderQuery.bindValue(":rb_id", rbID);
-    finderQuery.bindValue(":device", device);
-
-    if (!finderQuery.exec()) {
-        LOG_FAILED_QUERY(finderQuery)
-                << "rbID:" << rbID;
-    }
-
-    if (finderQuery.next()) {
-        trackID = finderQuery.value(finderQuery.record().indexOf("id")).toInt();
+    const int trackID = findTrackId(database, rbID, device);
+    if (trackID < 0) {
+        qWarning() << "Skipping Rekordbox track without a valid local row"
+                   << "rbID:" << rbID
+                   << "device:" << device
+                   << "location:" << location;
+        return false;
     }
 
     // Insert into device all tracks playlist
@@ -497,7 +514,10 @@ void insertTrack(
         LOG_FAILED_QUERY(queryInsertIntoDevicePlaylistTracks)
                 << "trackID:" << trackID
                 << "position:" << audioFilesCount;
+        return false;
     }
+
+    return true;
 }
 
 void buildPlaylistTree(
@@ -721,20 +741,20 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
 
     int audioFilesCount = 0;
     for (rekordbox_pdb_t::track_row_t* trackRow : trackRows) {
-        insertTrack(database,
-                trackRow,
-                query,
-                queryInsertIntoDevicePlaylistTracks,
-                artistsMap,
-                albumsMap,
-                genresMap,
-                keysMap,
-                devicePath,
-                device,
-                storedRatings,
-                audioFilesCount);
-
-        audioFilesCount++;
+        if (insertTrack(database,
+                    trackRow,
+                    query,
+                    queryInsertIntoDevicePlaylistTracks,
+                    artistsMap,
+                    albumsMap,
+                    genresMap,
+                    keysMap,
+                    devicePath,
+                    device,
+                    storedRatings,
+                    audioFilesCount)) {
+            audioFilesCount++;
+        }
     }
 
     if (audioFilesCount > 0 || folderOrPlaylistFound) {
@@ -850,22 +870,14 @@ void buildPlaylistTree(
                     trackIndex++) {
                 uint32_t rbTrackID = playlistTrackMap[childID][trackIndex];
 
-                int trackID = -1;
-                QSqlQuery finderQuery(database);
-                finderQuery.prepare("select id from " + kRekordboxLibraryTable +
-                        " where rb_id=:rb_id and device=:device");
-                finderQuery.bindValue(":rb_id", rbTrackID);
-                finderQuery.bindValue(":device", device);
-
-                if (!finderQuery.exec()) {
-                    LOG_FAILED_QUERY(finderQuery)
-                            << "rbTrackID:" << rbTrackID
-                            << "device:" << device;
+                const int trackID = findTrackId(
+                        database, static_cast<int>(rbTrackID), device);
+                if (trackID < 0) {
+                    qWarning() << "Skipping Rekordbox playlist entry without a valid track"
+                               << "rbTrackID:" << rbTrackID
+                               << "device:" << device
+                               << "playlistID:" << playlistID;
                     continue;
-                }
-
-                if (finderQuery.next()) {
-                    trackID = finderQuery.value(finderQuery.record().indexOf("id")).toInt();
                 }
 
                 queryInsertIntoPlaylistTracks.bindValue(":playlist_id", playlistID);

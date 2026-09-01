@@ -86,6 +86,7 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
     void slotCloneDeckOnLoadDoubleTapCheckbox(bool);
     void slotRateRampingModeLinearButton(bool);
     void slotRateRampSensitivitySlider(int);
+    void slotJogFilterLengthSpinbox(int);
 
     void slotTimeFormatChanged(double);
 
@@ -142,6 +143,7 @@ class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {
 
     RateControl::RampMode m_bRateRamping;
     int m_iRateRampSensitivity;
+    int m_iJogFilterLength;
     double m_dRateTempCoarse;
     double m_dRateTempFine;
     double m_dRatePermCoarse;

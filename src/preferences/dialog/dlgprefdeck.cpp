@@ -1,6 +1,7 @@
 #include "preferences/dialog/dlgprefdeck.h"
 
 #include <QDoubleSpinBox>
+#include <QSpinBox>
 
 #include "control/controlobject.h"
 #include "control/controlproxy.h"
@@ -352,6 +353,18 @@ DlgPrefDeck::DlgPrefDeck(QWidget* parent, UserSettingsPointer pConfig)
             this,
             &DlgPrefDeck::slotRateRampSensitivitySlider);
 
+    m_iJogFilterLength = RateControl::sanitizeJogFilterLength(
+            m_pConfig->getValue(
+                    ConfigKey(kControlsGroup, QStringLiteral("JogWheelFilterLength")),
+                    RateControl::kDefaultJogFilterLength));
+    RateControl::setJogFilterLength(m_iJogFilterLength);
+    m_iJogFilterLength = RateControl::getJogFilterLength();
+    spinBoxJogFilterLength->setValue(m_iJogFilterLength);
+    connect(spinBoxJogFilterLength,
+            QOverload<int>::of(&QSpinBox::valueChanged),
+            this,
+            &DlgPrefDeck::slotJogFilterLengthSpinbox);
+
     // Enable/disable permanent rate spinboxes when smooth ramping is selected
     connect(radioButtonRateRampModeLinear,
             &QRadioButton::toggled,
@@ -517,6 +530,8 @@ void DlgPrefDeck::slotUpdate() {
             m_pConfig->getValue(ConfigKey(kControlsGroup, QStringLiteral("RateRampSensitivity")),
                     kDefaultRateRampSensitivity));
 
+    spinBoxJogFilterLength->setValue(RateControl::getJogFilterLength());
+
     spinBoxTemporaryRateCoarse->setValue(RateControl::getTemporaryRateChangeCoarseAmount());
     spinBoxTemporaryRateFine->setValue(RateControl::getTemporaryRateChangeFineAmount());
     spinBoxPermanentRateCoarse->setValue(RateControl::getPermanentRateChangeCoarseAmount());
@@ -550,6 +565,7 @@ void DlgPrefDeck::slotResetToDefaults() {
     radioButtonRateRampModeStepping->setChecked(true);
 
     SliderRateRampSensitivity->setValue(kDefaultRateRampSensitivity);
+    spinBoxJogFilterLength->setValue(RateControl::kDefaultJogFilterLength);
 
     // Permanent and temporary pitch adjust fine/coarse.
     spinBoxTemporaryRateCoarse->setValue(4.0);
@@ -669,6 +685,10 @@ void DlgPrefDeck::slotRateRampSensitivitySlider(int value) {
     m_iRateRampSensitivity = value;
 }
 
+void DlgPrefDeck::slotJogFilterLengthSpinbox(int value) {
+    m_iJogFilterLength = value;
+}
+
 void DlgPrefDeck::slotRateRampingModeLinearButton(bool checked) {
     if (checked) {
         m_bRateRamping = RateControl::RampMode::Linear;
@@ -774,6 +794,11 @@ void DlgPrefDeck::slotApply() {
     m_pConfig->setValue(
             ConfigKey(kControlsGroup, QStringLiteral("RateRampSensitivity")),
             m_iRateRampSensitivity);
+
+    RateControl::setJogFilterLength(m_iJogFilterLength);
+    m_pConfig->setValue(
+            ConfigKey(kControlsGroup, QStringLiteral("JogWheelFilterLength")),
+            RateControl::getJogFilterLength());
 
     RateControl::setTemporaryRateChangeCoarseAmount(m_dRateTempCoarse);
     RateControl::setTemporaryRateChangeFineAmount(m_dRateTempFine);

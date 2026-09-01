@@ -342,6 +342,35 @@ You can always drag-and-drop tracks on screen to clone a deck.</string>
           </property>
          </widget>
         </item>
+        <item row="8" column="0">
+         <widget class="QLabel" name="labelJogFilterLength">
+          <property name="toolTip">
+           <string>Lower values react faster. Higher values smooth noisy jog wheel input.</string>
+          </property>
+          <property name="text">
+           <string>Jog wheel smoothing</string>
+          </property>
+          <property name="buddy">
+           <cstring>spinBoxJogFilterLength</cstring>
+          </property>
+         </widget>
+        </item>
+        <item row="8" column="1">
+         <widget class="QSpinBox" name="spinBoxJogFilterLength">
+          <property name="toolTip">
+           <string>Number of jog events averaged. Lower values provide faster response.</string>
+          </property>
+          <property name="minimum">
+           <number>1</number>
+          </property>
+          <property name="maximum">
+           <number>64</number>
+          </property>
+          <property name="value">
+           <number>6</number>
+          </property>
+         </widget>
+        </item>
         <item row="10" column="0">
          <widget class="QLabel" name="labelSpeedTemporary">
           <property name="enabled">
@@ -681,6 +710,7 @@ You can always drag-and-drop tracks on screen to clone a deck.</string>
   <tabstop>radioButtonRateRampModeLinear</tabstop>
   <tabstop>radioButtonRateRampModeStepping</tabstop>
   <tabstop>SliderRateRampSensitivity</tabstop>
+  <tabstop>spinBoxJogFilterLength</tabstop>
   <tabstop>spinBoxTemporaryRateFine</tabstop>
   <tabstop>spinBoxTemporaryRateCoarse</tabstop>
   <tabstop>spinBoxPermanentRateFine</tabstop>
