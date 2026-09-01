@@ -315,6 +315,12 @@ void MixxxMainWindow::initialize() {
                 &HighContrast::enabledChanged,
                 this,
                 &MixxxMainWindow::slotHighContrastChanged);
+        connect(pHighContrast,
+                &HighContrast::themeChanged,
+                this,
+                [this](int theme) {
+                    slotHighContrastChanged(theme != 0);
+                });
     }
 #ifndef __APPLE__
     connect(m_pPrefDlg,
@@ -335,7 +341,7 @@ void MixxxMainWindow::initialize() {
         reportCriticalErrorAndQuit(
                 "default skin cannot be loaded - see <b>mixxx</b> trace for more information");
         m_pCentralWidget = oldWidget;
-        //TODO (XXX) add dialog to warn user and launch skin choice page
+        // TODO (XXX) add dialog to warn user and launch skin choice page
     } else {
         m_pMenuBar->setStyleSheet(m_pCentralWidget->styleSheet());
     }
@@ -888,7 +894,7 @@ void MixxxMainWindow::slotFileLoadSongPlayer(int deck) {
 
     QString loadTrackText = tr("Load track to Deck %1").arg(QString::number(deck));
     QString deckWarningMessage = tr("Deck %1 is currently playing a track.")
-            .arg(QString::number(deck));
+                                         .arg(QString::number(deck));
     QString areYouSure = tr("Are you sure you want to load a new track?");
 
     if (ControlObject::get(ConfigKey(group, "play")) > 0.0) {
@@ -1172,8 +1178,8 @@ void MixxxMainWindow::rebootMixxxView() {
 
     if (!loadConfiguredSkin()) {
         QMessageBox::critical(this,
-                              tr("Error in skin file"),
-                              tr("The selected skin cannot be loaded."));
+                tr("Error in skin file"),
+                tr("The selected skin cannot be loaded."));
         m_inRebootMixxxView = false;
         // m_pWidgetParent is NULL, we can't continue.
         return;
@@ -1305,7 +1311,7 @@ bool MixxxMainWindow::eventFilter(QObject* obj, QEvent* event) {
     return QMainWindow::eventFilter(obj, event);
 }
 
-void MixxxMainWindow::closeEvent(QCloseEvent *event) {
+void MixxxMainWindow::closeEvent(QCloseEvent* event) {
     // WARNING: We can receive a CloseEvent while only partially
     // initialized. This is because we call QApplication::processEvents to
     // render LaunchImage progress in the constructor.
@@ -1334,7 +1340,7 @@ void MixxxMainWindow::checkDirectRendering() {
     UserSettingsPointer pConfig = m_pCoreServices->getSettings();
 
     if (!factory->isOpenGlAvailable() && !factory->isOpenGlesAvailable() &&
-        pConfig->getValueString(ConfigKey("[Direct Rendering]", "Warned")) != QString("yes")) {
+            pConfig->getValueString(ConfigKey("[Direct Rendering]", "Warned")) != QString("yes")) {
         QMessageBox::warning(nullptr,
                 tr("OpenGL Direct Rendering"),
                 tr("Direct rendering is not enabled on your machine.<br><br>"

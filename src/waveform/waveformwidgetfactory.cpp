@@ -15,6 +15,7 @@
 #include <QWindow>
 
 #include "control/controlobject.h"
+#include "control/controlpushbutton.h"
 #include "moc_waveformwidgetfactory.cpp"
 #include "util/cmdlineargs.h"
 #include "util/math.h"
@@ -56,6 +57,15 @@
 #include "widget/wwaveformviewer.h"
 
 namespace {
+const ConfigKey kDisplayGainKey(QStringLiteral("[BiteDJ]"),
+        QStringLiteral("waveform_gain"));
+const ConfigKey kDisplayZoomKey(QStringLiteral("[BiteDJ]"),
+        QStringLiteral("waveform_zoom"));
+const ConfigKey kResetDisplayDefaultsKey(QStringLiteral("[BiteDJ]"),
+        QStringLiteral("reset_display_defaults"));
+constexpr double kPiFlexWaveformGain = 0.9;
+constexpr double kPiFlexWaveformZoom = 3.0;
+
 bool isDeprecated(WaveformWidgetType::Type t) {
     switch (t) {
     case WaveformWidgetType::GLRGBWaveform:
@@ -79,8 +89,8 @@ bool isDeprecated(WaveformWidgetType::Type t) {
 // Returns true if the given waveform should be rendered.
 bool shouldRenderWaveform(WaveformWidgetAbstract* pWaveformWidget) {
     if (pWaveformWidget == nullptr ||
-        pWaveformWidget->getWidth() == 0 ||
-        pWaveformWidget->getHeight() == 0) {
+            pWaveformWidget->getWidth() == 0 ||
+            pWaveformWidget->getHeight() == 0) {
         return false;
     }
 
@@ -95,12 +105,12 @@ bool shouldRenderWaveform(WaveformWidgetAbstract* pWaveformWidget) {
 }
 
 const QRegularExpression openGLVersionRegex(QStringLiteral("^(\\d+)\\.(\\d+).*$"));
-}  // anonymous namespace
+} // anonymous namespace
 
 ///////////////////////////////////////////
 
 WaveformWidgetAbstractHandle::WaveformWidgetAbstractHandle()
-    : m_type(WaveformWidgetType::Count_WaveformwidgetType) {
+        : m_type(WaveformWidgetType::Count_WaveformwidgetType) {
 }
 
 ///////////////////////////////////////////
@@ -112,13 +122,13 @@ WaveformWidgetHolder::WaveformWidgetHolder()
 }
 
 WaveformWidgetHolder::WaveformWidgetHolder(WaveformWidgetAbstract* waveformWidget,
-                                           WWaveformViewer* waveformViewer,
-                                           const QDomNode& node,
-                                           const SkinContext& parentContext)
-    : m_waveformWidget(waveformWidget),
-      m_waveformViewer(waveformViewer),
-      m_skinNodeCache(node.cloneNode()),
-      m_skinContextCache(&parentContext) {
+        WWaveformViewer* waveformViewer,
+        const QDomNode& node,
+        const SkinContext& parentContext)
+        : m_waveformWidget(waveformWidget),
+          m_waveformViewer(waveformViewer),
+          m_skinNodeCache(node.cloneNode()),
+          m_skinContextCache(&parentContext) {
 }
 
 ///////////////////////////////////////////
@@ -329,12 +339,11 @@ WaveformWidgetFactory::WaveformWidgetFactory()
             minorGlesVersion = 0;
         } else {
             m_openGLVersion = QString("Unknown 0x%1")
-                .arg(version, 0, 16);
+                                      .arg(version, 0, 16);
         }
 
         if (majorGlVersion != 0) {
-            m_openGLVersion = QString::number(majorGlVersion) + "."
-                    + QString::number(minorGlVersion);
+            m_openGLVersion = QString::number(majorGlVersion) + "." + QString::number(minorGlVersion);
 
 #if !defined(QT_NO_OPENGL) && !defined(QT_OPENGL_ES_2)
             if (majorGlVersion * 100 + minorGlVersion >= 201) {
@@ -378,23 +387,22 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
 
     bool ok = false;
 
-    int frameRate = m_config->getValue(ConfigKey("[Waveform]","FrameRate"), m_frameRate);
+    int frameRate = m_config->getValue(ConfigKey("[Waveform]", "FrameRate"), m_frameRate);
     m_frameRate = math_clamp(frameRate, 1, 120);
 
-
-    int endTime = m_config->getValueString(ConfigKey("[Waveform]","EndOfTrackWarningTime")).toInt(&ok);
+    int endTime = m_config->getValueString(ConfigKey("[Waveform]", "EndOfTrackWarningTime")).toInt(&ok);
     if (ok) {
         setEndOfTrackWarningTime(endTime);
     } else {
-        m_config->set(ConfigKey("[Waveform]","EndOfTrackWarningTime"),
+        m_config->set(ConfigKey("[Waveform]", "EndOfTrackWarningTime"),
                 ConfigValue(m_endOfTrackWarningTime));
     }
 
-    double defaultZoom = m_config->getValueString(ConfigKey("[Waveform]","DefaultZoom")).toDouble(&ok);
+    double defaultZoom = m_config->getValueString(ConfigKey("[Waveform]", "DefaultZoom")).toDouble(&ok);
     if (ok) {
         setDefaultZoom(defaultZoom);
-    } else{
-        m_config->set(ConfigKey("[Waveform]","DefaultZoom"), ConfigValue(m_defaultZoom));
+    } else {
+        m_config->set(ConfigKey("[Waveform]", "DefaultZoom"), ConfigValue(m_defaultZoom));
     }
 
     bool zoomSync = m_config->getValue(ConfigKey("[Waveform]", "ZoomSynchronization"), m_zoomSync);
@@ -404,7 +412,7 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
     setDisplayBeatGridAlpha(beatGridAlpha);
 
     WaveformWidgetType::Type type = static_cast<WaveformWidgetType::Type>(
-            m_config->getValueString(ConfigKey("[Waveform]","WaveformType")).toInt(&ok));
+            m_config->getValueString(ConfigKey("[Waveform]", "WaveformType")).toInt(&ok));
     // Store the widget type on m_configType for later initialization.
     // We will initialize the objects later because of a problem with GL on QT 5.14.2 on Windows
     if (!ok || !setWidgetType(type, &m_configType)) {
@@ -426,15 +434,45 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
 
     for (int i = 0; i < FilterCount; i++) {
         double visualGain = m_config->getValueString(
-                ConfigKey("[Waveform]","VisualGain_" + QString::number(i))).toDouble(&ok);
+                                            ConfigKey("[Waveform]", "VisualGain_" + QString::number(i)))
+                                    .toDouble(&ok);
 
         if (ok) {
             setVisualGain(FilterIndex(i), visualGain);
         } else {
-            m_config->set(ConfigKey("[Waveform]","VisualGain_" + QString::number(i)),
-                          QString::number(m_visualGain[i]));
+            m_config->set(ConfigKey("[Waveform]", "VisualGain_" + QString::number(i)),
+                    QString::number(m_visualGain[i]));
         }
     }
+
+    // Bite DJ exposes the useful waveform sizing knobs in its touch settings
+    // instead of requiring an XML or mixxx.cfg edit. Keep one overall gain for
+    // all bands so changing waveform type cannot produce four different sizes.
+    if (!m_pCODisplayVisualGain) {
+        m_pCODisplayVisualGain.reset(new ControlObject(kDisplayGainKey,
+                true,
+                false,
+                true,
+                getVisualGain(All)));
+        connect(m_pCODisplayVisualGain.data(),
+                &ControlObject::valueChanged,
+                this,
+                &WaveformWidgetFactory::slotSetOverallVisualGain);
+    }
+    slotSetOverallVisualGain(m_pCODisplayVisualGain->get());
+
+    if (!m_pCODisplayZoom) {
+        m_pCODisplayZoom.reset(new ControlObject(kDisplayZoomKey,
+                true,
+                false,
+                true,
+                m_defaultZoom));
+        connect(m_pCODisplayZoom.data(),
+                &ControlObject::valueChanged,
+                this,
+                &WaveformWidgetFactory::slotSetDefaultZoomFromControl);
+    }
+    slotSetDefaultZoomFromControl(m_pCODisplayZoom->get());
 
     m_applyEqToWaveform = m_config->getValue(
             ConfigKey("[Waveform]", "ApplyEqToWaveform"), m_applyEqToWaveform);
@@ -454,14 +492,24 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
         m_pCOApplyEqToWaveform->set(m_applyEqToWaveform ? 1.0 : 0.0);
     }
 
-    int overviewNormalized = m_config->getValueString(ConfigKey("[Waveform]","OverviewNormalized")).toInt(&ok);
+    if (!m_pCOResetDisplayDefaults) {
+        m_pCOResetDisplayDefaults.reset(
+                new ControlPushButton(kResetDisplayDefaultsKey));
+        m_pCOResetDisplayDefaults->setButtonMode(ControlPushButton::TRIGGER);
+        connect(m_pCOResetDisplayDefaults.data(),
+                &ControlPushButton::valueChanged,
+                this,
+                &WaveformWidgetFactory::slotResetDisplayDefaults);
+    }
+
+    int overviewNormalized = m_config->getValueString(ConfigKey("[Waveform]", "OverviewNormalized")).toInt(&ok);
     if (ok) {
         setOverviewNormalized(static_cast<bool>(overviewNormalized));
     } else {
-        m_config->set(ConfigKey("[Waveform]","OverviewNormalized"), ConfigValue(m_overviewNormalized));
+        m_config->set(ConfigKey("[Waveform]", "OverviewNormalized"), ConfigValue(m_overviewNormalized));
     }
 
-    m_playMarkerPosition = m_config->getValue(ConfigKey("[Waveform]","PlayMarkerPosition"),
+    m_playMarkerPosition = m_config->getValue(ConfigKey("[Waveform]", "PlayMarkerPosition"),
             WaveformWidgetRenderer::s_defaultPlayMarkerPosition);
     setPlayMarkerPosition(m_playMarkerPosition);
 
@@ -497,6 +545,45 @@ bool WaveformWidgetFactory::setConfig(UserSettingsPointer config) {
                     toUntilMarkTextHeightLimitIndex(m_untilMarkTextHeightLimit))));
 
     return true;
+}
+
+void WaveformWidgetFactory::slotSetOverallVisualGain(double value) {
+    const double gain = math_clamp(value, 0.5, 1.5);
+    for (int i = 0; i < FilterCount; ++i) {
+        setVisualGain(FilterIndex(i), gain);
+    }
+    if (m_config) {
+        m_config->setValue(kDisplayGainKey, gain);
+    }
+}
+
+void WaveformWidgetFactory::slotSetDefaultZoomFromControl(double value) {
+    const double zoom = math_clamp(value, 1.0, 6.0);
+    setDefaultZoom(zoom);
+    if (m_config) {
+        m_config->setValue(kDisplayZoomKey, zoom);
+    }
+}
+
+void WaveformWidgetFactory::slotResetDisplayDefaults(double value) {
+    if (value <= 0.0) {
+        return;
+    }
+    m_pCODisplayVisualGain->set(kPiFlexWaveformGain);
+    m_pCODisplayZoom->set(kPiFlexWaveformZoom);
+    m_pCOWaveformType->set(19.0);     // Filtered waveform.
+    m_pCOApplyEqToWaveform->set(0.0); // Keep trim/EQ from resizing the wave.
+
+    // These controls are owned elsewhere but already exist before the skin is
+    // loaded. Setting them here makes Reset a complete display preset.
+    ControlObject::set(
+            ConfigKey(QStringLiteral("[BiteDJ]"),
+                    QStringLiteral("main_view_style")),
+            0.0);
+    ControlObject::set(
+            ConfigKey(QStringLiteral("[BiteDJ]"),
+                    QStringLiteral("high_contrast")),
+            0.0);
 }
 
 void WaveformWidgetFactory::destroyWidgets() {
@@ -543,11 +630,11 @@ void WaveformWidgetFactory::slotSkinLoaded() {
 }
 
 bool WaveformWidgetFactory::setWaveformWidget(WWaveformViewer* viewer,
-                                              const QDomElement& node,
-                                              const SkinContext& parentContext) {
+        const QDomElement& node,
+        const SkinContext& parentContext) {
     int index = findIndexOf(viewer);
     if (index != -1) {
-        qDebug() << "WaveformWidgetFactory::setWaveformWidget - "\
+        qDebug() << "WaveformWidgetFactory::setWaveformWidget - "
                     "viewer already have a waveform widget but it's not found by the factory !";
         delete viewer->getWaveformWidget();
     }
@@ -585,7 +672,7 @@ bool WaveformWidgetFactory::setWaveformWidget(WWaveformViewer* viewer,
 void WaveformWidgetFactory::setFrameRate(int frameRate) {
     m_frameRate = math_clamp(frameRate, 1, 120);
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","FrameRate"), ConfigValue(m_frameRate));
+        m_config->set(ConfigKey("[Waveform]", "FrameRate"), ConfigValue(m_frameRate));
     }
     if (m_vsyncThread) {
         m_vsyncThread->setSyncIntervalTimeMicros(static_cast<int>(1e6 / m_frameRate));
@@ -595,7 +682,7 @@ void WaveformWidgetFactory::setFrameRate(int frameRate) {
 void WaveformWidgetFactory::setEndOfTrackWarningTime(int endTime) {
     m_endOfTrackWarningTime = endTime;
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","EndOfTrackWarningTime"), ConfigValue(m_endOfTrackWarningTime));
+        m_config->set(ConfigKey("[Waveform]", "EndOfTrackWarningTime"), ConfigValue(m_endOfTrackWarningTime));
     }
 }
 
@@ -690,11 +777,11 @@ bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force)
 
     m_skipRender = true;
 
-    //re-create/setup all waveform widgets
+    // re-create/setup all waveform widgets
     for (auto& holder : m_waveformWidgetHolders) {
         WaveformWidgetAbstract* previousWidget = holder.m_waveformWidget;
         TrackPointer pTrack = previousWidget->getTrackInfo();
-        //previousWidget->hold();
+        // previousWidget->hold();
         double previousZoom = previousWidget->getZoomFactor();
         double previousPlayMarkerPosition = previousWidget->getPlayMarkerPosition();
         int previousbeatgridAlpha = previousWidget->getBeatGridAlpha();
@@ -709,7 +796,7 @@ bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force)
         viewer->setDisplayBeatGridAlpha(previousbeatgridAlpha);
         // resize() doesn't seem to get called on the widget. I think Qt skips
         // it since the size didn't change.
-        //viewer->resize(viewer->size());
+        // viewer->resize(viewer->size());
         widget->resize(viewer->width(), viewer->height());
         widget->setTrack(pTrack);
         widget->getWidget()->show();
@@ -721,10 +808,9 @@ bool WaveformWidgetFactory::setWidgetTypeFromHandle(int handleIndex, bool force)
 }
 
 void WaveformWidgetFactory::setDefaultZoom(double zoom) {
-    m_defaultZoom = math_clamp(zoom, WaveformWidgetRenderer::s_waveformMinZoom,
-                               WaveformWidgetRenderer::s_waveformMaxZoom);
+    m_defaultZoom = math_clamp(zoom, WaveformWidgetRenderer::s_waveformMinZoom, WaveformWidgetRenderer::s_waveformMaxZoom);
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","DefaultZoom"), ConfigValue(m_defaultZoom));
+        m_config->set(ConfigKey("[Waveform]", "DefaultZoom"), ConfigValue(m_defaultZoom));
     }
 
     for (const auto& holder : std::as_const(m_waveformWidgetHolders)) {
@@ -735,7 +821,7 @@ void WaveformWidgetFactory::setDefaultZoom(double zoom) {
 void WaveformWidgetFactory::setZoomSync(bool sync) {
     m_zoomSync = sync;
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","ZoomSynchronization"), ConfigValue(m_zoomSync));
+        m_config->set(ConfigKey("[Waveform]", "ZoomSynchronization"), ConfigValue(m_zoomSync));
     }
 
     if (m_waveformWidgetHolders.size() == 0) {
@@ -762,7 +848,7 @@ void WaveformWidgetFactory::setDisplayBeatGridAlpha(int alpha) {
 void WaveformWidgetFactory::setVisualGain(FilterIndex index, double gain) {
     m_visualGain[index] = gain;
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","VisualGain_" + QString::number(index)), QString::number(m_visualGain[index]));
+        m_config->set(ConfigKey("[Waveform]", "VisualGain_" + QString::number(index)), QString::number(m_visualGain[index]));
     }
     if (!m_overviewNormalized && index == FilterIndex::All) {
         emit overallVisualGainChanged();
@@ -776,7 +862,7 @@ double WaveformWidgetFactory::getVisualGain(FilterIndex index) const {
 void WaveformWidgetFactory::setOverviewNormalized(bool normalize) {
     m_overviewNormalized = normalize;
     if (m_config) {
-        m_config->set(ConfigKey("[Waveform]","OverviewNormalized"), ConfigValue(m_overviewNormalized));
+        m_config->set(ConfigKey("[Waveform]", "OverviewNormalized"), ConfigValue(m_overviewNormalized));
     }
     emit overviewNormalizeChanged();
 }
@@ -825,7 +911,7 @@ void WaveformWidgetFactory::renderSelf() {
             static_cast<int>(m_waveformWidgetHolders.size()));
 
     if (!m_skipRender) {
-        if (m_type) {   // no regular updates for an empty waveform
+        if (m_type) { // no regular updates for an empty waveform
             // next rendered frame is displayed after next buffer swap and than after VSync
             QVarLengthArray<bool, 10> shouldRenderWaveforms(
                     static_cast<int>(m_waveformWidgetHolders.size()));
@@ -843,7 +929,7 @@ void WaveformWidgetFactory::renderSelf() {
                 // Calculate play position for the new Frame in following run
                 pWaveformWidget->preRender(m_vsyncThread);
             }
-            //qDebug() << "prerender" << m_vsyncThread->elapsed();
+            // qDebug() << "prerender" << m_vsyncThread->elapsed();
 
             // It may happen that there is an artificially delayed due to
             // anti tearing driver settings
@@ -856,7 +942,7 @@ void WaveformWidgetFactory::renderSelf() {
                     continue;
                 }
                 pWaveformWidget->render();
-                //qDebug() << "render" << i << m_vsyncThread->elapsed();
+                // qDebug() << "render" << i << m_vsyncThread->elapsed();
             }
         }
 
@@ -869,9 +955,9 @@ void WaveformWidgetFactory::renderSelf() {
 
         // Notify all other waveform-like widgets (e.g. WSpinny's) that they should
         // update.
-        //int t1 = m_vsyncThread->elapsed();
+        // int t1 = m_vsyncThread->elapsed();
         emit waveformUpdateTick();
-        //qDebug() << "emit" << m_vsyncThread->elapsed() - t1;
+        // qDebug() << "emit" << m_vsyncThread->elapsed() - t1;
 
         m_frameCnt += 1.0f;
         mixxx::Duration timeCnt = m_time.elapsed();
@@ -886,7 +972,7 @@ void WaveformWidgetFactory::renderSelf() {
     m_pVisualsManager->process(m_endOfTrackWarningTime);
     m_pGuiTick->process();
 
-    //qDebug() << "refresh end" << m_vsyncThread->elapsed();
+    // qDebug() << "refresh end" << m_vsyncThread->elapsed();
 }
 
 void WaveformWidgetFactory::render() {
@@ -900,9 +986,9 @@ void WaveformWidgetFactory::swapSelf() {
 
     // Do this in an extra slot to be sure to hit the desired interval
     if (!m_skipRender) {
-        if (m_type) {   // no regular updates for an empty waveform
+        if (m_type) { // no regular updates for an empty waveform
             // Show rendered buffer from last render() run
-            //qDebug() << "swap() start" << m_vsyncThread->elapsed();
+            // qDebug() << "swap() start" << m_vsyncThread->elapsed();
             for (const auto& holder : std::as_const(m_waveformWidgetHolders)) {
                 WaveformWidgetAbstract* pWaveformWidget = holder.m_waveformWidget;
 
@@ -919,7 +1005,7 @@ void WaveformWidgetFactory::swapSelf() {
                     glw->swapBuffers();
                     glw->doneCurrent();
                 }
-                //qDebug() << "swap x" << m_vsyncThread->elapsed();
+                // qDebug() << "swap x" << m_vsyncThread->elapsed();
             }
         }
         // WSpinnys are also double-buffered QGLWidgets, like all the waveform
@@ -992,7 +1078,7 @@ void WaveformWidgetFactory::evaluateWidgets() {
             category = WaveformT::category();
         };
 
-        switch(type) {
+        switch (type) {
         case WaveformWidgetType::EmptyWaveform:
             setWaveformVarsByType.operator()<EmptyWaveformWidget>();
             break;
@@ -1191,7 +1277,7 @@ WaveformWidgetAbstract* WaveformWidgetFactory::createWaveformWidget(
             type = WaveformWidgetType::EmptyWaveform;
         }
 
-        switch(type) {
+        switch (type) {
         case WaveformWidgetType::SoftwareWaveform:
             widget = new SoftwareWaveformWidget(viewer->getGroup(), viewer);
             break;
@@ -1268,8 +1354,8 @@ WaveformWidgetAbstract* WaveformWidgetFactory::createWaveformWidget(
             break;
 #endif
         default:
-        //case WaveformWidgetType::SoftwareSimpleWaveform: TODO: (vrince)
-        //case WaveformWidgetType::EmptyWaveform:
+            // case WaveformWidgetType::SoftwareSimpleWaveform: TODO: (vrince)
+            // case WaveformWidgetType::EmptyWaveform:
             widget = new EmptyWaveformWidget(viewer->getGroup(), viewer);
             break;
         }

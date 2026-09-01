@@ -23,7 +23,8 @@
 
   [FxPanel],current selects the page; [FxPanel],fx / [FxPanel],key are
   the per-page triggers the tab buttons write. All three are created by
-  the skin parser. Not persisted — the panel opens on FX every launch.
+  the skin parser. Persisted so the appliance returns to the DJ's preferred
+  FX, key, waveform, or beatgrid tool after a restart.
 -->
 <Template>
   <WidgetGroup>
@@ -118,7 +119,7 @@
         outgrows the panel packs from the top instead of shoving the rest of
         the layout around.
       -->
-      <WidgetStack currentpage="[FxPanel],current">
+      <WidgetStack currentpage="[FxPanel],current" persist="true">
         <ObjectName>FxPanel_Stack</ObjectName>
         <SizePolicy>me,i</SizePolicy>
         <Children>

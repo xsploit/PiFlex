@@ -43,6 +43,36 @@ TEST_F(HighContrastTest, InvertColorPreservesAlpha) {
     EXPECT_EQ(42, HighContrast::invertColor(translucent).alpha());
 }
 
+TEST_F(HighContrastTest, ThemesOnlyReplaceKnownAccents) {
+    EXPECT_EQ(QColor("#f2a000"),
+            HighContrast::themeColor(QColor("#c9372c"), 1));
+    EXPECT_EQ(QColor("#00a6c8"),
+            HighContrast::themeColor(QColor("#855ea7"), 1));
+    EXPECT_EQ(QColor("#e31b23"),
+            HighContrast::themeColor(QColor("#f15921"), 2));
+    EXPECT_EQ(QColor("#3f7cff"),
+            HighContrast::themeColor(QColor("#488ab3"), 2));
+
+    // Spectral waveform and arbitrary track colours must not be recoloured.
+    EXPECT_EQ(QColor("#6ee128"),
+            HighContrast::themeColor(QColor("#6ee128"), 1));
+}
+
+TEST_F(HighContrastTest, ThemeColorPreservesAlpha) {
+    const QColor translucent(201, 55, 44, 42);
+    EXPECT_EQ(42, HighContrast::themeColor(translucent, 1).alpha());
+}
+
+TEST_F(HighContrastTest, ThemeStyleSheetMapsHexAndRgbaAccents) {
+    const QString sheet = QStringLiteral(
+            "#Button { color: #c9372c; border: #855ea7; "
+            "background: rgba(241, 89, 33, 0.12); }");
+    EXPECT_EQ(QStringLiteral(
+                      "#Button { color: #f2a000; border: #00a6c8; "
+                      "background: rgba(242, 160, 0, 0.12); }"),
+            HighContrast::themeStyleSheet(sheet, 1));
+}
+
 TEST_F(HighContrastTest, InvertsHexValues) {
     EXPECT_EQ(QStringLiteral("#Deck { background-color: #ffffff; }"),
             invert(QStringLiteral("#Deck { background-color: #000000; }")));

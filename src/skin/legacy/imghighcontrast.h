@@ -27,7 +27,7 @@ class ImgHighContrast : public ImgColorProcessor {
     }
 
     QColor doColorCorrection(const QColor& c) const override {
-        return HighContrast::invertColor(c);
+        return HighContrast::mapColor(c);
     }
 
     void correctImageColors(QImage* p) const override {

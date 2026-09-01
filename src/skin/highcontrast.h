@@ -44,6 +44,7 @@ class HighContrast : public QObject {
     static HighContrast* tryInstance();
 
     static bool isEnabled();
+    static bool isActive();
 
     /// The colour to actually paint: inverted while the mode is on, otherwise
     /// `color` unchanged. For colours that are hard-coded in C++ rather than
@@ -52,6 +53,13 @@ class HighContrast : public QObject {
 
     /// The stylesheet to actually apply: inverted while the mode is on.
     static QString mapStyleSheet(const QString& styleSheet);
+
+    /// Applies the accent palette belonging to a saved main-view style. View 0
+    /// is native PiFlex, 1 is XDJ-inspired amber/cyan, and 2 is
+    /// Pioneered-inspired red/blue. Only known accent colours are changed;
+    /// waveform frequency and track colours are deliberately left intact.
+    static QColor themeColor(const QColor& color, int theme);
+    static QString themeStyleSheet(const QString& styleSheet, int theme);
 
     /// Inverts every colour literal in a Qt stylesheet, leaving selectors,
     /// geometry and text alone. SVG icons referenced by url() are inverted the
@@ -72,9 +80,11 @@ class HighContrast : public QObject {
     /// skin view on this: the inversion happens as the skin is parsed, so
     /// there is nothing to re-apply in place.
     void enabledChanged(bool enabled);
+    void themeChanged(int theme);
 
   private slots:
     void onEnabledChanged(double value);
+    void onThemeChanged(double value);
 
   private:
     QString iconCacheDir() const;
@@ -83,5 +93,7 @@ class HighContrast : public QObject {
 
     UserSettingsPointer m_pConfig;
     std::unique_ptr<ControlObject> m_pCoEnabled;
+    std::unique_ptr<ControlObject> m_pCoTheme;
     bool m_enabled;
+    int m_theme;
 };

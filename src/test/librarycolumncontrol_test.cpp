@@ -152,6 +152,8 @@ TEST_F(LibraryColumnControlTest, ManagedLayoutIsAppliedAndSelfHealing) {
             model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_PREVIEW);
     const int ratingCol =
             model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING);
+    const int bpmCol = model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_BPM);
+    const int keyCol = model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_KEY);
     const int titleCol =
             model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_TITLE);
 
@@ -165,6 +167,9 @@ TEST_F(LibraryColumnControlTest, ManagedLayoutIsAppliedAndSelfHealing) {
 
     // The rating column must fit all five stars.
     EXPECT_GE(header->sectionSize(ratingCol), StarRating().sizeHint().width());
+    // BPM and Key need a visible gutter instead of reading as one header.
+    EXPECT_GE(header->sectionSize(bpmCol), 56);
+    EXPECT_GE(header->sectionSize(keyCol), 56);
 
     // Switching playlists on the same model must not disturb the layout.
     model.setPlaylist(QStringLiteral("/media/USB1"));

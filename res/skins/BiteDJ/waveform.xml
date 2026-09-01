@@ -4,11 +4,18 @@
     <Layout>horizontal</Layout>
     <Size>0me,50me</Size>
     <Children>
-      <WidgetGroup>
-        <ObjectName>WaveformInfo</ObjectName>
-        <Layout>vertical</Layout>
-        <Size>126f,0me</Size>
+      <!-- Only the lightweight deck-information rail changes between main
+           views. The expensive Visual below exists exactly once, regardless
+           of style, so changing the layout does not multiply waveform
+           renderers on the Pi. -->
+      <WidgetStack currentpage="[BiteDJ],main_view_style">
+        <ObjectName>MainViewDeckInfoStack</ObjectName>
         <Children>
+          <WidgetGroup>
+            <ObjectName>WaveformInfo</ObjectName>
+            <Layout>vertical</Layout>
+            <Size>126f,0me</Size>
+            <Children>
           <WidgetGroup>
             <ObjectName>WaveformInfo_Header</ObjectName>
             <Layout>horizontal</Layout>
@@ -105,8 +112,18 @@
               </WidgetGroup>
             </Children>
           </WidgetGroup>
+            </Children>
+          </WidgetGroup>
+
+          <Template src="skin:templates/main_view_xdj_deck.xml">
+            <SetVariable name="channel"><Variable name="channel"/></SetVariable>
+          </Template>
+
+          <Template src="skin:templates/main_view_pioneered_deck.xml">
+            <SetVariable name="channel"><Variable name="channel"/></SetVariable>
+          </Template>
         </Children>
-      </WidgetGroup>
+      </WidgetStack>
       <Visual>
         <TooltipId>waveform_display</TooltipId>
         <ObjectName>Waveform<Variable name="channel"/></ObjectName>

@@ -33,6 +33,12 @@ int minSectionPxForColumn(const QString& name) {
         static const int minRatingPx = StarRating().sizeHint().width() + 10;
         return minRatingPx;
     }
+    // Short numeric columns used to collapse almost to their text width,
+    // visually joining "BPM" and "Key" on the 10-inch Browse page. Preserve
+    // a finger-readable gutter even when both keep their compact weight.
+    if (name == LIBRARYTABLE_BPM || name == LIBRARYTABLE_KEY) {
+        return 56;
+    }
     return kMinSectionPx;
 }
 
@@ -174,8 +180,7 @@ void LibraryColumnControl::slotVisibilityChanged(double v) {
     }
     const QString name = senderKey.mid(kVisCOPrefix.size());
 
-    auto it = std::find_if(m_columns.begin(), m_columns.end(),
-            [&name](const ManagedColumn& c) { return c.name == name; });
+    auto it = std::find_if(m_columns.begin(), m_columns.end(), [&name](const ManagedColumn& c) { return c.name == name; });
     if (it == m_columns.end()) {
         return;
     }
@@ -214,8 +219,7 @@ void LibraryColumnControl::slotWeightChanged(double v) {
     }
     const QString name = senderKey.mid(kWeightCOPrefix.size());
 
-    auto it = std::find_if(m_columns.begin(), m_columns.end(),
-            [&name](const ManagedColumn& c) { return c.name == name; });
+    auto it = std::find_if(m_columns.begin(), m_columns.end(), [&name](const ManagedColumn& c) { return c.name == name; });
     if (it == m_columns.end()) {
         return;
     }
@@ -337,9 +341,9 @@ int LibraryColumnControl::findLogicalIndexForColumn(
     }
     for (int li = 0; li < pHeader->count(); ++li) {
         const QString colName = pModel->headerData(
-                                                li,
-                                                Qt::Horizontal,
-                                                TrackModel::kHeaderNameRole)
+                                              li,
+                                              Qt::Horizontal,
+                                              TrackModel::kHeaderNameRole)
                                         .toString();
         if (colName == name) {
             return li;

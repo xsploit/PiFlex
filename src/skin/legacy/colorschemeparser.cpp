@@ -1,23 +1,23 @@
 #include "skin/legacy/colorschemeparser.h"
 
-#include "widget/wpixmapstore.h"
-#include "widget/wimagestore.h"
-#include "widget/wskincolor.h"
-#include "util/xml.h"
-#include "skin/legacy/imgsource.h"
-#include "skin/legacy/imgloader.h"
 #include "skin/legacy/imgcolor.h"
 #include "skin/legacy/imghighcontrast.h"
 #include "skin/legacy/imginvert.h"
+#include "skin/legacy/imgloader.h"
+#include "skin/legacy/imgsource.h"
 #include "skin/legacy/legacyskinparser.h"
 #include "skin/legacy/skincontext.h"
+#include "util/xml.h"
+#include "widget/wimagestore.h"
+#include "widget/wpixmapstore.h"
+#include "widget/wskincolor.h"
 
 namespace {
 /// Bite DJ: tops the skin's image/colour chain with the daylight-mode filter
 /// when the mode is on, so it is the last thing applied to every skin colour
 /// and every skin image. Takes ownership either way.
 ImgSource* withHighContrast(ImgSource* pParent) {
-    if (!HighContrast::isEnabled()) {
+    if (!HighContrast::isActive()) {
         return pParent;
     }
     return new ImgHighContrast(pParent);
@@ -114,23 +114,46 @@ ImgSource* ColorSchemeParser::parseFilters(const QDomNode& filt) {
             int sconst = 0;
             int vconst = 0;
 
-            if (!f.namedItem("HMin").isNull()) { hmin = XmlParse::selectNodeInt(f, "HMin"); }
-            if (!f.namedItem("HMax").isNull()) { hmax = XmlParse::selectNodeInt(f, "HMax"); }
-            if (!f.namedItem("SMin").isNull()) { smin = XmlParse::selectNodeInt(f, "SMin"); }
-            if (!f.namedItem("SMax").isNull()) { smax = XmlParse::selectNodeInt(f, "SMax"); }
-            if (!f.namedItem("VMin").isNull()) { vmin = XmlParse::selectNodeInt(f, "VMin"); }
-            if (!f.namedItem("VMax").isNull()) { vmax = XmlParse::selectNodeInt(f, "VMax"); }
+            if (!f.namedItem("HMin").isNull()) {
+                hmin = XmlParse::selectNodeInt(f, "HMin");
+            }
+            if (!f.namedItem("HMax").isNull()) {
+                hmax = XmlParse::selectNodeInt(f, "HMax");
+            }
+            if (!f.namedItem("SMin").isNull()) {
+                smin = XmlParse::selectNodeInt(f, "SMin");
+            }
+            if (!f.namedItem("SMax").isNull()) {
+                smax = XmlParse::selectNodeInt(f, "SMax");
+            }
+            if (!f.namedItem("VMin").isNull()) {
+                vmin = XmlParse::selectNodeInt(f, "VMin");
+            }
+            if (!f.namedItem("VMax").isNull()) {
+                vmax = XmlParse::selectNodeInt(f, "VMax");
+            }
 
-            if (!f.namedItem("HConst").isNull()) { hconst = XmlParse::selectNodeInt(f, "HConst"); }
-            if (!f.namedItem("SConst").isNull()) { sconst = XmlParse::selectNodeInt(f, "SConst"); }
-            if (!f.namedItem("VConst").isNull()) { vconst = XmlParse::selectNodeInt(f, "VConst"); }
+            if (!f.namedItem("HConst").isNull()) {
+                hconst = XmlParse::selectNodeInt(f, "HConst");
+            }
+            if (!f.namedItem("SConst").isNull()) {
+                sconst = XmlParse::selectNodeInt(f, "SConst");
+            }
+            if (!f.namedItem("VConst").isNull()) {
+                vconst = XmlParse::selectNodeInt(f, "VConst");
+            }
 
-            if (!f.namedItem("HFact").isNull()) { hfact = XmlParse::selectNodeFloat(f, "HFact"); }
-            if (!f.namedItem("SFact").isNull()) { sfact = XmlParse::selectNodeFloat(f, "SFact"); }
-            if (!f.namedItem("VFact").isNull()) { vfact = XmlParse::selectNodeFloat(f, "VFact"); }
+            if (!f.namedItem("HFact").isNull()) {
+                hfact = XmlParse::selectNodeFloat(f, "HFact");
+            }
+            if (!f.namedItem("SFact").isNull()) {
+                sfact = XmlParse::selectNodeFloat(f, "SFact");
+            }
+            if (!f.namedItem("VFact").isNull()) {
+                vfact = XmlParse::selectNodeFloat(f, "VFact");
+            }
 
-            ret = new ImgHSVTweak(ret, hmin, hmax, smin, smax, vmin, vmax, hfact, hconst,
-                                  sfact, sconst, vfact, vconst);
+            ret = new ImgHSVTweak(ret, hmin, hmax, smin, smax, vmin, vmax, hfact, hconst, sfact, sconst, vfact, vconst);
         } else {
             qDebug() << "Unknown image filter:" << name;
         }

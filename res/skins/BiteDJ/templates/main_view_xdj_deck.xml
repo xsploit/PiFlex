@@ -1,0 +1,66 @@
+<!--
+  XDJ-inspired performance-view rail. This adapts only the compact deck-info
+  hierarchy from https://github.com/marcmonka/xdj-open-source-skin-mixxx;
+  BiteDJ keeps its own waveform, effects, decks, cue drawer, Browse, Settings,
+  and controller behavior.
+-->
+<Template>
+  <WidgetGroup>
+    <ObjectName>MainViewXdjInfo</ObjectName>
+    <Layout>vertical</Layout>
+    <Size>104f,0me</Size>
+    <Children>
+      <WidgetGroup>
+        <ObjectName>MainViewXdjHeader</ObjectName>
+        <Layout>horizontal</Layout>
+        <Size>0me,32f</Size>
+        <Children>
+          <Label>
+            <ObjectName>MainViewXdjDeck</ObjectName>
+            <Text>DECK <Variable name="channel"/></Text>
+          </Label>
+        </Children>
+        <Connection>
+          <ConfigKey>[Channel<Variable name="channel"/>],play</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
+      </WidgetGroup>
+
+      <WidgetGroup>
+        <ObjectName>MainViewXdjKeyRow</ObjectName>
+        <Layout>horizontal</Layout>
+        <Size>0me,42f</Size>
+        <Children>
+          <Label><ObjectName>MainViewRailCaption</ObjectName><Text>KEY</Text><Size>35f,0me</Size></Label>
+          <Key>
+            <ObjectName>MainViewRailKey</ObjectName>
+            <Size>0me,0me</Size>
+            <DisplayCents>false</DisplayCents>
+            <Connection><ConfigKey>[Channel<Variable name="channel"/>],visual_key</ConfigKey></Connection>
+          </Key>
+        </Children>
+      </WidgetGroup>
+
+      <WidgetGroup>
+        <ObjectName>MainViewXdjLoopRow</ObjectName>
+        <Layout>horizontal</Layout>
+        <Size>0me,42f</Size>
+        <Children>
+          <Label><ObjectName>MainViewRailCaption</ObjectName><Text>LOOP</Text><Size>42f,0me</Size></Label>
+          <BeatSpinBox>
+            <ObjectName>MainViewRailLoop</ObjectName>
+            <Size>0me,0me</Size>
+            <Value>[Channel<Variable name="channel"/>],beatloop_size</Value>
+            <ReadOnly>true</ReadOnly>
+          </BeatSpinBox>
+        </Children>
+        <Connection>
+          <ConfigKey>[Channel<Variable name="channel"/>],loop_enabled</ConfigKey>
+          <BindProperty>highlight</BindProperty>
+        </Connection>
+      </WidgetGroup>
+
+      <WidgetGroup><Size>0me,0me</Size></WidgetGroup>
+    </Children>
+  </WidgetGroup>
+</Template>

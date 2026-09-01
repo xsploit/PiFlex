@@ -858,6 +858,69 @@ WBeatSpinBox::up-button {
   image: url(skin:icons/quantize.svg) no-repeat center center;
 }
 
+/* Alternate main-view rails. Only this narrow information column changes;
+ * each deck keeps one waveform renderer in every view. */
+#MainViewXdjInfo,
+#MainViewPioneeredInfo {
+  margin-right: 8px;
+  background-color: #101114;
+}
+
+#MainViewXdjHeader,
+#MainViewPioneeredHeader {
+  background-color: #32323c;
+  border-bottom: 2px solid #f15921;
+}
+
+#MainViewXdjHeader[highlight="1"],
+#MainViewPioneeredHeader[highlight="1"] {
+  background-color: #c9372c;
+}
+
+#MainViewXdjDeck,
+#MainViewPioneeredDeck,
+#MainViewPioneeredKey,
+#MainViewRailKey {
+  color: #e5e6ea;
+  font-size: 15px;
+  font-weight: bold;
+  qproperty-alignment: 'AlignCenter';
+}
+
+#MainViewXdjKeyRow,
+#MainViewXdjLoopRow {
+  border-bottom: 1px solid #32323c;
+}
+
+#MainViewXdjLoopRow[highlight="1"] {
+  background-color: rgba(241, 89, 33, 0.15);
+}
+
+#MainViewRailCaption {
+  color: #a7a9ac;
+  font-size: 10px;
+  font-weight: bold;
+  qproperty-alignment: 'AlignCenter';
+}
+
+#MainViewRailLoop {
+  margin: 0;
+  padding: 0;
+  qproperty-alignment: 'AlignCenter';
+}
+
+#MainViewPioneeredKey {
+  background-color: #000000;
+}
+
+#MainViewPioneeredQuantize {
+  image: url(skin:icons/quantize.svg) no-repeat center center;
+}
+
+#MainViewPioneeredKeylock {
+  image: url(skin:icons/keylock.svg) no-repeat center center;
+}
+
 /************************************************************************/
 /*     Tabs                                                             */
 /************************************************************************/

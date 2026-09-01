@@ -15,7 +15,10 @@
 namespace {
 const QString kGroup = QStringLiteral("[BiteDJ]");
 const QString kItem = QStringLiteral("high_contrast");
+const QString kThemeItem = QStringLiteral("main_view_style");
+const QString kLegacyThemeItem = QStringLiteral("visual_theme");
 constexpr double kDefault = 0.0;
+constexpr int kDefaultTheme = 0;
 
 // Sub-directory of the settings dir holding the inverted copies of the skin's
 // SVG icons. Regenerated on every skin parse in the mode, so editing an icon in
@@ -41,6 +44,12 @@ bool isHexDigit(QChar c) {
 bool isPassThroughName(const QString& name) {
     return name.compare(QLatin1String("transparent"), Qt::CaseInsensitive) == 0 ||
             name.compare(QLatin1String("none"), Qt::CaseInsensitive) == 0;
+}
+
+QColor withPreservedAlpha(const QColor& source, const char* replacement) {
+    QColor result(QString::fromLatin1(replacement));
+    result.setAlpha(source.alpha());
+    return result;
 }
 
 /// Parses `#rgb` / `#rrggbb` at `pos` (which points at the '#'). Returns the
@@ -237,7 +246,8 @@ QAtomicPointer<HighContrast> HighContrast::s_pInstance = nullptr;
 
 HighContrast::HighContrast(UserSettingsPointer pConfig)
         : m_pConfig(pConfig),
-          m_enabled(false) {
+          m_enabled(false),
+          m_theme(kDefaultTheme) {
     // Created here rather than in SystemSettings (which owns the rest of the
     // [BiteDJ] preferences) because the skin parser has to be able to consult
     // this object while it builds widgets, and CoreServices constructs it
@@ -251,6 +261,21 @@ HighContrast::HighContrast(UserSettingsPointer pConfig)
             &ControlObject::valueChanged,
             this,
             &HighContrast::onEnabledChanged);
+
+    const ConfigKey themeKey(kGroup, kThemeItem);
+    // Older PiFlex builds exposed this as visual_theme. Use that value as the
+    // migration fallback so an existing choice survives the renamed, more
+    // accurate Main View setting.
+    const int legacyTheme = m_pConfig->getValue(
+            ConfigKey(kGroup, kLegacyThemeItem), kDefaultTheme);
+    m_theme = std::clamp(m_pConfig->getValue(themeKey, legacyTheme), 0, 2);
+    m_pCoTheme = std::make_unique<ControlObject>(
+            themeKey, true, false, true, kDefaultTheme);
+    m_pCoTheme->set(m_theme);
+    connect(m_pCoTheme.get(),
+            &ControlObject::valueChanged,
+            this,
+            &HighContrast::onThemeChanged);
 
     s_pInstance.storeRelease(this);
 }
@@ -271,17 +296,95 @@ bool HighContrast::isEnabled() {
 }
 
 // static
+bool HighContrast::isActive() {
+    HighContrast* pInstance = tryInstance();
+    return pInstance && (pInstance->m_enabled || pInstance->m_theme != kDefaultTheme);
+}
+
+// static
 QColor HighContrast::mapColor(const QColor& color) {
-    return isEnabled() ? invertColor(color) : color;
+    HighContrast* pInstance = tryInstance();
+    if (!pInstance) {
+        return color;
+    }
+    const QColor themed = themeColor(color, pInstance->m_theme);
+    return pInstance->m_enabled ? invertColor(themed) : themed;
 }
 
 // static
 QString HighContrast::mapStyleSheet(const QString& styleSheet) {
     HighContrast* pInstance = tryInstance();
-    if (!pInstance || !pInstance->m_enabled) {
+    if (!pInstance) {
         return styleSheet;
     }
-    return invertStyleSheet(styleSheet, pInstance->iconCacheDir());
+    const QString themed = themeStyleSheet(styleSheet, pInstance->m_theme);
+    return pInstance->m_enabled
+            ? invertStyleSheet(themed, pInstance->iconCacheDir())
+            : themed;
+}
+
+// static
+QColor HighContrast::themeColor(const QColor& color, int theme) {
+    if (theme == kDefaultTheme || !color.isValid()) {
+        return color;
+    }
+    const QString name = color.name(QColor::HexRgb).toLower();
+    const bool primary = name == QLatin1String("#c9372c") ||
+            name == QLatin1String("#d73535") ||
+            name == QLatin1String("#f15921");
+    const bool secondary = name == QLatin1String("#855ea7") ||
+            name == QLatin1String("#08537c") ||
+            name == QLatin1String("#488ab3");
+    if (theme == 1) {
+        return primary      ? withPreservedAlpha(color, "#f2a000")
+                : secondary ? withPreservedAlpha(color, "#00a6c8")
+                            : color;
+    }
+    if (theme == 2) {
+        return primary      ? withPreservedAlpha(color, "#e31b23")
+                : secondary ? withPreservedAlpha(color, "#3f7cff")
+                            : color;
+    }
+    return color;
+}
+
+// static
+QString HighContrast::themeStyleSheet(const QString& styleSheet, int theme) {
+    if (theme == kDefaultTheme) {
+        return styleSheet;
+    }
+    QString out = styleSheet;
+    const QString primary = theme == 1 ? QStringLiteral("#f2a000")
+                                       : QStringLiteral("#e31b23");
+    const QString secondary = theme == 1 ? QStringLiteral("#00a6c8")
+                                         : QStringLiteral("#3f7cff");
+    for (const QString& source : {QStringLiteral("#c9372c"),
+                 QStringLiteral("#d73535"),
+                 QStringLiteral("#f15921")}) {
+        out.replace(QRegularExpression(QRegularExpression::escape(source),
+                            QRegularExpression::CaseInsensitiveOption),
+                primary);
+    }
+    for (const QString& source : {QStringLiteral("#855ea7"),
+                 QStringLiteral("#08537c"),
+                 QStringLiteral("#488ab3")}) {
+        out.replace(QRegularExpression(QRegularExpression::escape(source),
+                            QRegularExpression::CaseInsensitiveOption),
+                secondary);
+    }
+    const QString primaryRgb = theme == 1 ? QStringLiteral("242, 160, 0")
+                                          : QStringLiteral("227, 27, 35");
+    const QString secondaryRgb = theme == 1 ? QStringLiteral("0, 166, 200")
+                                            : QStringLiteral("63, 124, 255");
+    out.replace(QRegularExpression(
+                        QStringLiteral(R"(rgba\(\s*(?:215\s*,\s*53\s*,\s*53|241\s*,\s*89\s*,\s*33)\s*,\s*([^\)]+)\))"),
+                        QRegularExpression::CaseInsensitiveOption),
+            QStringLiteral("rgba(%1, \\1)").arg(primaryRgb));
+    out.replace(QRegularExpression(
+                        QStringLiteral(R"(rgba\(\s*(?:72\s*,\s*138\s*,\s*179|8\s*,\s*125\s*,\s*225)\s*,\s*([^\)]+)\))"),
+                        QRegularExpression::CaseInsensitiveOption),
+            QStringLiteral("rgba(%1, \\1)").arg(secondaryRgb));
+    return out;
 }
 
 QString HighContrast::iconCacheDir() const {
@@ -301,6 +404,17 @@ void HighContrast::onEnabledChanged(double value) {
     m_pConfig->setValue(ConfigKey(kGroup, kItem), m_enabled ? 1.0 : 0.0);
     m_pConfig->save();
     emit enabledChanged(m_enabled);
+}
+
+void HighContrast::onThemeChanged(double value) {
+    const int theme = std::clamp(qRound(value), 0, 2);
+    if (theme == m_theme) {
+        return;
+    }
+    m_theme = theme;
+    m_pConfig->setValue(ConfigKey(kGroup, kThemeItem), m_theme);
+    m_pConfig->save();
+    emit themeChanged(m_theme);
 }
 
 // static

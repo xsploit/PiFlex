@@ -15,6 +15,10 @@
             <SetVariable name="ConfigKey">general</SetVariable>
           </Template>
           <Template src="skin:templates/setting_subtab_button.xml">
+            <SetVariable name="Text">Display</SetVariable>
+            <SetVariable name="ConfigKey">display</SetVariable>
+          </Template>
+          <Template src="skin:templates/setting_subtab_button.xml">
             <SetVariable name="Text">Library</SetVariable>
             <SetVariable name="ConfigKey">columns</SetVariable>
           </Template>
@@ -298,76 +302,6 @@
                       <ConfigKey>[BiteDJ],vinyl_mode</ConfigKey>
                       <BindProperty>enabled</BindProperty>
                     </Connection>
-                  </WidgetGroup>
-
-                  <WidgetGroup>
-                    <ObjectName>SettingsRow</ObjectName>
-                    <Layout>horizontal</Layout>
-                    <Size>0me,52f</Size>
-                    <Children>
-                      <Label>
-                        <ObjectName>SettingsRowLabel</ObjectName>
-                        <Text>Wave</Text>
-                        <Size>0me,0me</Size>
-                      </Label>
-                      <WidgetGroup>
-                        <ObjectName>SettingsSegmented</ObjectName>
-                        <Layout>horizontal</Layout>
-                        <Size>150f,40f</Size>
-                        <Children>
-                          <Template src="skin:templates/setting_segment_button.xml">
-                            <SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable>
-                            <SetVariable name="Text">RGB</SetVariable>
-                            <SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable>
-                            <SetVariable name="Value">17</SetVariable>
-                          </Template>
-                          <Template src="skin:templates/setting_segment_button.xml">
-                            <SetVariable name="ObjectName">SettingsSegmentMid</SetVariable>
-                            <SetVariable name="Text">Filt</SetVariable>
-                            <SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable>
-                            <SetVariable name="Value">19</SetVariable>
-                          </Template>
-                          <Template src="skin:templates/setting_segment_button.xml">
-                            <SetVariable name="ObjectName">SettingsSegmentRight</SetVariable>
-                            <SetVariable name="Text">Stack</SetVariable>
-                            <SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable>
-                            <SetVariable name="Value">25</SetVariable>
-                          </Template>
-                        </Children>
-                      </WidgetGroup>
-                    </Children>
-                  </WidgetGroup>
-
-                  <WidgetGroup>
-                    <ObjectName>SettingsRow</ObjectName>
-                    <Layout>horizontal</Layout>
-                    <Size>0me,52f</Size>
-                    <Children>
-                      <Label>
-                        <ObjectName>SettingsRowLabel</ObjectName>
-                        <Text>Apply Waveform EQ</Text>
-                        <Size>0me,0me</Size>
-                      </Label>
-                      <WidgetGroup>
-                        <ObjectName>SettingsSegmented</ObjectName>
-                        <Layout>horizontal</Layout>
-                        <Size>110f,40f</Size>
-                        <Children>
-                          <Template src="skin:templates/setting_segment_button.xml">
-                            <SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable>
-                            <SetVariable name="Text">On</SetVariable>
-                            <SetVariable name="ConfigKey">[Waveform],apply_eq_to_waveform</SetVariable>
-                            <SetVariable name="Value">1</SetVariable>
-                          </Template>
-                          <Template src="skin:templates/setting_segment_button.xml">
-                            <SetVariable name="ObjectName">SettingsSegmentRight</SetVariable>
-                            <SetVariable name="Text">Off</SetVariable>
-                            <SetVariable name="ConfigKey">[Waveform],apply_eq_to_waveform</SetVariable>
-                            <SetVariable name="Value">0</SetVariable>
-                          </Template>
-                        </Children>
-                      </WidgetGroup>
-                    </Children>
                   </WidgetGroup>
 
                   <!-- All three destructive actions share one row: the column
@@ -1091,6 +1025,131 @@
               <WidgetGroup>
                 <ObjectName>SettingsSpacer</ObjectName>
                 <Size>0me,0me</Size>
+              </WidgetGroup>
+
+            </Children>
+          </WidgetGroup>
+
+          <!-- Appended to preserve the hard-coded Devices child index used by
+               ControllerSettings. The sub-tab itself can still appear second. -->
+          <WidgetGroup trigger="[SettingsTab],display">
+            <ObjectName>SettingsPanel</ObjectName>
+            <Layout>horizontal</Layout>
+            <SizePolicy>me,me</SizePolicy>
+            <Children>
+
+              <WidgetGroup>
+                <ObjectName>GeneralCol</ObjectName>
+                <Layout>vertical</Layout>
+                <SizePolicy>me,me</SizePolicy>
+                <Children>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName>
+                    <Layout>horizontal</Layout>
+                    <Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Main View</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup>
+                        <ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>174f,40f</Size>
+                        <Children>
+                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">PiFlex</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">XDJ</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Pioneered</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">2</SetVariable></Template>
+                        </Children>
+                      </WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Lighting</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>130f,40f</Size><Children>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Night</SetVariable><SetVariable name="ConfigKey">[BiteDJ],high_contrast</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Day</SetVariable><SetVariable name="ConfigKey">[BiteDJ],high_contrast</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Wave Style</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>156f,40f</Size><Children>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">RGB</SetVariable><SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable><SetVariable name="Value">17</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">Filt</SetVariable><SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable><SetVariable name="Value">19</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Stack</SetVariable><SetVariable name="ConfigKey">[Waveform],waveform_type</SetVariable><SetVariable name="Value">25</SetVariable></Template>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Wave Response</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>150f,40f</Size><Children>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Fixed</SetVariable><SetVariable name="ConfigKey">[Waveform],apply_eq_to_waveform</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">EQ</SetVariable><SetVariable name="ConfigKey">[Waveform],apply_eq_to_waveform</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
+                </Children>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>GeneralCol</ObjectName>
+                <Layout>vertical</Layout>
+                <SizePolicy>me,me</SizePolicy>
+                <Children>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Wave Height</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>174f,40f</Size><Children>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Slim</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_gain</SetVariable><SetVariable name="Value">0.8</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">PiFlex</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_gain</SetVariable><SetVariable name="Value">0.9</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Bold</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_gain</SetVariable><SetVariable name="Value">1.0</SetVariable></Template>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Wave View</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>174f,40f</Size><Children>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Wide</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_zoom</SetVariable><SetVariable name="Value">2</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">PiFlex</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_zoom</SetVariable><SetVariable name="Value">3</SetVariable></Template>
+                        <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Near</SetVariable><SetVariable name="ConfigKey">[BiteDJ],waveform_zoom</SetVariable><SetVariable name="Value">4</SetVariable></Template>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Library Text</Text><Size>0me,0me</Size></Label>
+                      <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>130f,40f</Size><Children>
+                        <PushButton><ObjectName>SettingsActionButton</ObjectName><Size>0me,40f</Size><NumberStates>1</NumberStates><State><Number>0</Number><Text>-</Text></State><Connection><ConfigKey>[Library],font_size_decrement</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection></PushButton>
+                        <PushButton><ObjectName>SettingsActionButton</ObjectName><Size>0me,40f</Size><NumberStates>1</NumberStates><State><Number>0</Number><Text>+</Text></State><Connection><ConfigKey>[Library],font_size_increment</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection></PushButton>
+                      </Children></WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                    <Children>
+                      <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Display</Text><Size>0me,0me</Size></Label>
+                      <PushButton><ObjectName>SettingsActionButton</ObjectName><Size>150f,40f</Size><NumberStates>1</NumberStates><State><Number>0</Number><Text>Reset Defaults</Text></State><Connection><ConfigKey>[BiteDJ],reset_display_defaults</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection></PushButton>
+                    </Children>
+                  </WidgetGroup>
+
+                  <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
+                </Children>
               </WidgetGroup>
 
             </Children>
