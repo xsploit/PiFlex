@@ -16,6 +16,7 @@
 #include "library/dao/fsanalysiscache.h"
 #include "library/dao/fscueoverridestore.h"
 #include "library/dao/fsmetaoverridestore.h"
+#include "library/edmc/edmcfeature.h"
 #include "library/queryutil.h"
 #ifdef __ENGINEPRIME__
 #include "library/export/libraryexporter.h"
@@ -207,6 +208,11 @@ Library::Library(
             m_pBrowseFeature,
             &BrowseFeature::slotLibraryScanFinished);
     addFeature(m_pBrowseFeature);
+
+    // Native front-end for the low-priority EDMC companion service. The
+    // companion owns Chromium and downloads; BiteDJ only browses its loopback
+    // API and loads completed files through the normal track path.
+    addFeature(new EdmcFeature(this, m_pConfig));
 
     // Bite DJ: no "Recordings" sidebar entry. Recording is started and stopped
     // per drive from the Settings tab and lands in <mount>/Recordings, which

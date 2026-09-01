@@ -225,8 +225,8 @@ WPushButton[value="1"]:hover {
   qproperty-layoutAlignment: 'AlignHCenter | AlignVCenter';
 }
 
-/* FX / KEY page tabs. Same select-only bar as the Settings sub-tabs, sized
- * down to fit the 180px panel. */
+/* FX / KEY / WAVE / GRID page tabs. Same select-only bar as the Settings sub-tabs, enlarged
+ * for the 10-inch touch target while remaining in a dedicated side column. */
 #FxPanel_TabBar {
   margin: 0 0 6px 0;
   qproperty-layoutSpacing: 4;
@@ -236,7 +236,7 @@ WPushButton[value="1"]:hover {
   background-color: transparent;
   border: 2px solid #32323c;
   color: #a7a9ac;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -412,6 +412,7 @@ WPushButton[value="1"]:hover {
   border: 1px solid #3a3a3a;
   border-radius: 3px;
   font-weight: bold;
+  font-size: 16px;
   text-transform: uppercase;
 }
 
@@ -457,7 +458,7 @@ WPushButton[value="1"]:hover {
 
 #BeatFX_MixLabel {
   color: #a7a9ac;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -478,14 +479,14 @@ WPushButton[value="1"]:hover {
 
 #KeyFX_DeckLabel_1 {
   color: #855ea7;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: bold;
   text-transform: uppercase;
 }
 
 #KeyFX_DeckLabel_2 {
   color: #c9372c;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: bold;
   text-transform: uppercase;
 }
@@ -493,7 +494,7 @@ WPushButton[value="1"]:hover {
 /* Orange whenever the playing key differs from the file's key. */
 #KeyFX_DeckKey {
   color: #e7e8e9;
-  font-size: 18px;
+  font-size: 21px;
   font-weight: bold;
 }
 
@@ -512,12 +513,12 @@ WPushButton[value="1"]:hover {
   border: 1px solid #3a3a3a;
   border-radius: 3px;
   color: #a7a9ac;
-  font-size: 16px;
+  font-size: 19px;
   font-weight: bold;
 }
 
 #KeyFX_Reset {
-  font-size: 13px;
+  font-size: 15px;
   text-transform: uppercase;
 }
 
@@ -545,7 +546,7 @@ WEffectSelector {
   border: 1px solid #3a3a3a;
   border-radius: 2px;
   color: #a7a9ac;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: bold;
   padding: 4px;
   text-transform: uppercase;
@@ -561,13 +562,13 @@ WEffectSelector::drop-down {
   border: 0;
   subcontrol-origin: padding;
   subcontrol-position: center right;
-  width: 24px;
+  width: 30px;
 }
 
 WEffectSelector::down-arrow {
   image: url(skin:icons/dropdown_arrow.svg);
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
 }
 
 /* The open drop-down is a separate top-level popup, not a child of the closed
@@ -579,8 +580,77 @@ WEffectSelector QAbstractItemView {
   background-color: #1a1a1a;
   border: 1px solid #32323c;
   color: #e5e6ea;
+  font-size: 21px;
+  outline: 0;
   selection-background-color: #855ea7;
   selection-color: #e7e8e9;
+}
+
+/* Linked waveform zoom and beatgrid pages. Kept compact so the panel does not
+ * steal horizontal waveform space. */
+#WavePanel_Title,
+#GridPanel_Title {
+  color: #e7e8e9;
+  font-size: 17px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+#WavePanel_ButtonRow,
+#GridPanel_ButtonRow {
+  qproperty-layoutSpacing: 4;
+}
+
+#WavePanel_ZoomOut,
+#WavePanel_ZoomReset,
+#WavePanel_ZoomIn,
+#GridPanel_Button,
+#GridPanel_SetButton {
+  background-color: #1a1a1a;
+  border: 1px solid #3a3a3a;
+  border-radius: 3px;
+  color: #a7a9ac;
+  font-size: 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+#WavePanel_ZoomOut:pressed,
+#WavePanel_ZoomReset:pressed,
+#WavePanel_ZoomIn:pressed,
+#GridPanel_Button:pressed,
+#GridPanel_SetButton:pressed {
+  border-color: #855ea7;
+  color: #e7e8e9;
+}
+
+#WavePanel_Hint {
+  color: #777b80;
+  font-size: 13px;
+}
+
+#GridPanel_DeckBlock {
+  padding-bottom: 6px;
+}
+
+#GridPanel_DeckLabel_1 {
+  color: #855ea7;
+  font-size: 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+#GridPanel_DeckLabel_2 {
+  color: #c9372c;
+  font-size: 15px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+WEffectSelector QAbstractItemView::item {
+  border-bottom: 1px solid #32323c;
+  min-height: 56px;
+  padding: 8px 14px;
 }
 
 #EffectMeter {

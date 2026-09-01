@@ -16,6 +16,9 @@ class WEffectSelector : public QComboBox, public WBaseWidget {
 
     void setup(const QDomNode& node, const SkinContext& context);
 
+  protected:
+    void showPopup() override;
+
   private slots:
     void slotEffectUpdated();
     void slotEffectSelected(int newIndex);

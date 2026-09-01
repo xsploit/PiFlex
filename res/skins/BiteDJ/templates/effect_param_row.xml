@@ -64,7 +64,7 @@
             <Children>
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <Size>0me,36f</Size>
+                <Size>0me,44f</Size>
                 <Children>
                   <Template src="skin:templates/effect_param_bucket.xml">
                     <SetVariable name="EffectGroup"><Variable name="EffectGroup"/></SetVariable>
@@ -88,7 +88,7 @@
               </WidgetGroup>
               <WidgetGroup>
                 <Layout>horizontal</Layout>
-                <Size>0me,36f</Size>
+                <Size>0me,44f</Size>
                 <Children>
                   <Template src="skin:templates/effect_param_bucket.xml">
                     <SetVariable name="EffectGroup"><Variable name="EffectGroup"/></SetVariable>
@@ -149,7 +149,7 @@
 
               <EffectParameterKnobComposed>
                 <ObjectName>BeatFX_ParamKnob</ObjectName>
-                <Size>40f,40f</Size>
+                <Size>48f,48f</Size>
                 <Knob scalemode="STRETCH_ASPECT">icons/knob.svg</Knob>
                 <MinAngle>-230</MinAngle>
                 <MaxAngle>50</MaxAngle>

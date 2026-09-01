@@ -712,6 +712,15 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
     }
 
     if (audioFilesCount > 0 || folderOrPlaylistFound) {
+        // The devicePath playlist already contains every track parsed from
+        // this Rekordbox volume. Once a device has playlist children, the
+        // touch-oriented sidebar expands the device row instead of activating
+        // that playlist, which made the generated all-tracks view effectively
+        // unreachable. Expose it as an explicit first child while continuing
+        // to use the existing playlist model and backing location.
+        deviceItem->appendChild(QStringLiteral("All Tracks"),
+                QVariant(QList<QString>{devicePath, IS_NOT_RECORDBOX_DEVICE}));
+
         // If we have found anything, recursively build playlist/folder TreeItem children
         // for the original device TreeItem
         buildPlaylistTree(database,

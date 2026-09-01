@@ -1,6 +1,6 @@
 <!--
-  The Overview panel to the right of the waveforms. Two pages behind an
-  FX / KEY tab bar, so both control sets get the full panel instead of
+  The Overview panel to the right of the waveforms. Four pages behind an
+  FX / KEY / WAVE / GRID tab bar, so every control set gets the full panel instead of
   sharing it:
 
   FX  — single-column BeatFX for [EffectRack1_EffectUnit1_Effect1]. The
@@ -15,6 +15,12 @@
         current key, +/-2 semitone nudges, and a reset (see
         templates/keyfx_deck_row.xml).
 
+  WAVE — linked scrolling-waveform zoom. The buttons target deck 1 because
+         BiteDJ enables waveform zoom synchronization; the FLX6 mapping also
+         drives both decks explicitly.
+
+  GRID — compact per-deck beatgrid translation and tempo adjustment.
+
   [FxPanel],current selects the page; [FxPanel],fx / [FxPanel],key are
   the per-page triggers the tab buttons write. All three are created by
   the skin parser. Not persisted — the panel opens on FX every launch.
@@ -23,52 +29,79 @@
   <WidgetGroup>
     <ObjectName>BeatFX_Container</ObjectName>
     <Layout>vertical</Layout>
-    <Size>180max,0me</Size>
+    <Size>230max,0me</Size>
     <Children>
 
       <WidgetGroup>
         <ObjectName>FxPanel_TabBar</ObjectName>
-        <Layout>horizontal</Layout>
-        <Size>0me,36f</Size>
+        <Layout>vertical</Layout>
+        <Size>0me,88f</Size>
         <Children>
-          <!-- Select-only, not toggles: always emit 1 on press (never 0),
-               so tapping the already-active tab is a no-op. -->
-          <PushButton>
-            <ObjectName>FxPanel_TabFx</ObjectName>
-            <Size>0me,36f</Size>
-            <NumberStates>2</NumberStates>
-            <State>
-              <Number>0</Number>
-              <Text>FX</Text>
-            </State>
-            <State>
-              <Number>1</Number>
-              <Text>FX</Text>
-            </State>
-            <LeftClickIsPushButton>true</LeftClickIsPushButton>
-            <Connection>
-              <ConfigKey>[FxPanel],fx</ConfigKey>
-              <EmitOnDownPress>true</EmitOnDownPress>
-            </Connection>
-          </PushButton>
-          <PushButton>
-            <ObjectName>FxPanel_TabKey</ObjectName>
-            <Size>0me,36f</Size>
-            <NumberStates>2</NumberStates>
-            <State>
-              <Number>0</Number>
-              <Text>Key</Text>
-            </State>
-            <State>
-              <Number>1</Number>
-              <Text>Key</Text>
-            </State>
-            <LeftClickIsPushButton>true</LeftClickIsPushButton>
-            <Connection>
-              <ConfigKey>[FxPanel],key</ConfigKey>
-              <EmitOnDownPress>true</EmitOnDownPress>
-            </Connection>
-          </PushButton>
+          <!-- Keep the side panel narrow, but give each tab half the panel
+               width by using two rows instead of cramming four into one. -->
+          <WidgetGroup>
+            <ObjectName>FxPanel_TabRowPrimary</ObjectName>
+            <Layout>horizontal</Layout>
+            <Size>0me,44f</Size>
+            <Children>
+              <PushButton>
+                <ObjectName>FxPanel_TabFx</ObjectName>
+                <Size>0me,44f</Size>
+                <NumberStates>2</NumberStates>
+                <State><Number>0</Number><Text>FX</Text></State>
+                <State><Number>1</Number><Text>FX</Text></State>
+                <LeftClickIsPushButton>true</LeftClickIsPushButton>
+                <Connection>
+                  <ConfigKey>[FxPanel],fx</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+              <PushButton>
+                <ObjectName>FxPanel_TabKey</ObjectName>
+                <Size>0me,44f</Size>
+                <NumberStates>2</NumberStates>
+                <State><Number>0</Number><Text>Key</Text></State>
+                <State><Number>1</Number><Text>Key</Text></State>
+                <LeftClickIsPushButton>true</LeftClickIsPushButton>
+                <Connection>
+                  <ConfigKey>[FxPanel],key</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+            </Children>
+          </WidgetGroup>
+
+          <WidgetGroup>
+            <ObjectName>FxPanel_TabRowTools</ObjectName>
+            <Layout>horizontal</Layout>
+            <Size>0me,44f</Size>
+            <Children>
+              <PushButton>
+                <ObjectName>FxPanel_TabWave</ObjectName>
+                <Size>0me,44f</Size>
+                <NumberStates>2</NumberStates>
+                <State><Number>0</Number><Text>Wave</Text></State>
+                <State><Number>1</Number><Text>Wave</Text></State>
+                <LeftClickIsPushButton>true</LeftClickIsPushButton>
+                <Connection>
+                  <ConfigKey>[FxPanel],wave</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+              <PushButton>
+                <ObjectName>FxPanel_TabGrid</ObjectName>
+                <Size>0me,44f</Size>
+                <NumberStates>2</NumberStates>
+                <State><Number>0</Number><Text>Grid</Text></State>
+                <State><Number>1</Number><Text>Grid</Text></State>
+                <LeftClickIsPushButton>true</LeftClickIsPushButton>
+                <Connection>
+                  <ConfigKey>[FxPanel],grid</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+            </Children>
+          </WidgetGroup>
         </Children>
       </WidgetGroup>
 
@@ -80,7 +113,7 @@
         ~5px off the deck strip and made the bottom of the screen jump
         between FX and KEY — and again whenever an effect with a bucket row
         was loaded. Ignored drops the stack out of the minimum-height
-        calculation, so this 180px side panel is sized purely by the
+        calculation, so this 230px side panel is sized purely by the
         waveform column beside it. Pages are AlignTop, so content that
         outgrows the panel packs from the top instead of shoving the rest of
         the layout around.
@@ -99,7 +132,7 @@
               <WidgetGroup>
                 <ObjectName>BeatFX_Header</ObjectName>
                 <Layout>vertical</Layout>
-                <Size>0me,140f</Size>
+                <Size>0me,170f</Size>
                 <Children>
 
                   <EffectSelector>
@@ -108,17 +141,17 @@
                     <EffectUnit>1</EffectUnit>
                     <Effect>1</Effect>
                     <Elide>right</Elide>
-                    <Size>0me,32f</Size>
+                    <Size>0me,40f</Size>
                   </EffectSelector>
 
                   <WidgetGroup>
                     <ObjectName>BeatFX_DeckRouting</ObjectName>
                     <Layout>horizontal</Layout>
-                    <Size>0me,44f</Size>
+                    <Size>0me,52f</Size>
                     <Children>
                       <PushButton>
                         <ObjectName>BeatFX_DeckAssign1</ObjectName>
-                        <Size>0me,44f</Size>
+                        <Size>0me,52f</Size>
                         <NumberStates>2</NumberStates>
                         <State>
                           <Number>0</Number>
@@ -135,7 +168,7 @@
                       </PushButton>
                       <PushButton>
                         <ObjectName>BeatFX_DeckAssign2</ObjectName>
-                        <Size>0me,44f</Size>
+                        <Size>0me,52f</Size>
                         <NumberStates>2</NumberStates>
                         <State>
                           <Number>0</Number>
@@ -156,16 +189,16 @@
                   <WidgetGroup>
                     <ObjectName>BeatFX_WetRow</ObjectName>
                     <Layout>horizontal</Layout>
-                    <Size>0me,16f</Size>
+                    <Size>0me,22f</Size>
                     <Children>
                       <Label>
                         <ObjectName>BeatFX_MixLabel</ObjectName>
                         <Text>Mix</Text>
-                        <Size>28f,me</Size>
+                        <Size>36f,me</Size>
                       </Label>
                       <VuMeter>
                         <ObjectName>BeatFX_MixMeter</ObjectName>
-                        <Size>0me,10f</Size>
+                        <Size>0me,14f</Size>
                         <PathBack scalemode="STRETCH">icons/effect_meter_bg.png</PathBack>
                         <PathVu scalemode="STRETCH">icons/effect_meter_fg.png</PathVu>
                         <Horizontal>true</Horizontal>
@@ -182,7 +215,7 @@
 
                   <PushButton>
                     <ObjectName>BeatFX_ActiveToggle</ObjectName>
-                    <Size>0me,28f</Size>
+                    <Size>0me,36f</Size>
                     <NumberStates>2</NumberStates>
                     <State>
                       <Number>0</Number>
@@ -335,6 +368,91 @@
                 <Size>0me,0me</Size>
               </WidgetGroup>
 
+            </Children>
+          </WidgetGroup>
+
+          <WidgetGroup trigger="[FxPanel],wave">
+            <ObjectName>FxPanel_Page</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>me,me</SizePolicy>
+            <Children>
+
+              <Label>
+                <ObjectName>WavePanel_Title</ObjectName>
+                <Text>Linked waveform zoom</Text>
+                <Size>0me,34f</Size>
+                <Alignment>center</Alignment>
+              </Label>
+
+              <WidgetGroup>
+                <ObjectName>WavePanel_ButtonRow</ObjectName>
+                <Layout>horizontal</Layout>
+                <Size>0me,58f</Size>
+                <Children>
+                  <PushButton>
+                    <ObjectName>WavePanel_ZoomOut</ObjectName>
+                    <Size>0me,58f</Size>
+                    <NumberStates>1</NumberStates>
+                    <State><Number>0</Number><Text>Out</Text></State>
+                    <Connection>
+                      <ConfigKey>[Channel1],waveform_zoom_up</ConfigKey>
+                      <ConnectValueToWidget>false</ConnectValueToWidget>
+                      <EmitOnDownPress>true</EmitOnDownPress>
+                    </Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>WavePanel_ZoomReset</ObjectName>
+                    <Size>0me,58f</Size>
+                    <NumberStates>1</NumberStates>
+                    <State><Number>0</Number><Text>Reset</Text></State>
+                    <Connection>
+                      <ConfigKey>[Channel1],waveform_zoom_set_default</ConfigKey>
+                      <ConnectValueToWidget>false</ConnectValueToWidget>
+                      <EmitOnDownPress>true</EmitOnDownPress>
+                    </Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>WavePanel_ZoomIn</ObjectName>
+                    <Size>0me,58f</Size>
+                    <NumberStates>1</NumberStates>
+                    <State><Number>0</Number><Text>In</Text></State>
+                    <Connection>
+                      <ConfigKey>[Channel1],waveform_zoom_down</ConfigKey>
+                      <ConnectValueToWidget>false</ConnectValueToWidget>
+                      <EmitOnDownPress>true</EmitOnDownPress>
+                    </Connection>
+                  </PushButton>
+                </Children>
+              </WidgetGroup>
+
+              <Label>
+                <ObjectName>WavePanel_Hint</ObjectName>
+                <Text>FLX6: Shift + Browse</Text>
+                <Size>0me,30f</Size>
+                <Alignment>center</Alignment>
+              </Label>
+
+              <WidgetGroup><ObjectName>BeatFX_Spacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
+            </Children>
+          </WidgetGroup>
+
+          <WidgetGroup trigger="[FxPanel],grid">
+            <ObjectName>FxPanel_Page</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>me,me</SizePolicy>
+            <Children>
+
+              <Label>
+                <ObjectName>GridPanel_Title</ObjectName>
+                <Text>Beatgrid adjust</Text>
+                <Size>0me,32f</Size>
+                <Alignment>center</Alignment>
+              </Label>
+
+              <Template src="skin:templates/grid_deck_row.xml"><SetVariable name="channel">1</SetVariable></Template>
+              <Template src="skin:templates/grid_deck_row.xml"><SetVariable name="channel">2</SetVariable></Template>
+
+              <WidgetGroup><ObjectName>BeatFX_Spacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
             </Children>
           </WidgetGroup>
 

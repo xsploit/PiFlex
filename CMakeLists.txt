@@ -59,8 +59,11 @@ function(FATAL_ERROR_MISSING_ENV)
 endfunction()
 
 execute_process(COMMAND uname -r OUTPUT_VARIABLE UNAME_R OUTPUT_STRIP_TRAILING_WHITESPACE)
-if(UNAME_R MATCHES ".*[Mm]icrosoft.*" OR UNAME_R MATCHES ".*WSL.*")
+option(ALLOW_WSL_BUILD "Allow unsupported WSL builds for UI development" OFF)
+if((UNAME_R MATCHES ".*[Mm]icrosoft.*" OR UNAME_R MATCHES ".*WSL.*") AND NOT ALLOW_WSL_BUILD)
   message(FATAL_ERROR "Building on Windows Subsystem for Linux (WSL) is not supported.")
+elseif(UNAME_R MATCHES ".*[Mm]icrosoft.*" OR UNAME_R MATCHES ".*WSL.*")
+  message(WARNING "Building on WSL for UI development; audio and USB behavior are not production-valid.")
 endif()
 
 # Set a default build type if none was specified
@@ -616,6 +619,8 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/library/dao/settingsdao.cpp
   src/library/dao/trackdao.cpp
   src/library/dao/trackschema.cpp
+  src/library/edmc/edmcbrowserview.cpp
+  src/library/edmc/edmcfeature.cpp
   src/library/tabledelegates/defaultdelegate.cpp
   src/library/dlgcoverartfullsize.cpp
   src/library/dlgcoverartfullsize.ui

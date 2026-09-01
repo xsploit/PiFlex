@@ -2,8 +2,10 @@
 
 #include <QHash>
 #include <QPointer>
+#include <QThreadPool>
 #include <QTimer>
 
+#include "library/dao/fshistorystore.h"
 #include "library/trackset/baseplaylistfeature.h"
 #include "preferences/usersettings.h"
 
@@ -102,7 +104,8 @@ class SetlogFeature : public BasePlaylistFeature {
     void forgetShownDriveSession();
     /// Relabels (or inserts) the sidebar item of one session in place, so
     /// logging a track does not collapse the tree the DJ is browsing.
-    void updateDriveSessionItem(const QString& mountRoot, const QString& sessionName);
+    void updateDriveSessionItem(
+            const QString& mountRoot, const FsHistorySession& session);
     /// Row of the volume node of `mountRoot`, or an invalid index.
     QModelIndex indexOfVolumeNode(const QString& mountRoot);
     QModelIndex indexOfItemData(const QVariant& data);
@@ -128,6 +131,9 @@ class SetlogFeature : public BasePlaylistFeature {
     QStringList m_usbMountPoints;
     /// Mount root -> the session being logged to on that drive right now.
     QHash<QString, QString> m_currentSessionByMount;
+    /// USB history SQLite work must never block the GUI/waveform thread. A
+    /// single worker also preserves the order in which tracks entered a set.
+    QThreadPool m_historyWritePool;
     /// What the scratch playlist currently holds, so a track logged to the
     /// session on screen can be appended to the view as well.
     QString m_shownMountRoot;

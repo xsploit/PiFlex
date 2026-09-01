@@ -2,9 +2,11 @@
 
 #include <QDateTime>
 #include <QDir>
+#include <QFutureWatcher>
 #include <QMenu>
 #include <QMessageBox>
 #include <QSqlTableModel>
+#include <QtConcurrentRun>
 
 #include "library/dao/fshistorystore.h"
 #include "library/library.h"
@@ -38,6 +40,11 @@ const QChar kSessionNodeSeparator = QLatin1Char('\n');
 
 /// Backstop for a drive being plugged in; an eject is reported to us directly.
 constexpr int kUsbPollIntervalMillis = 5000;
+
+struct DriveHistoryWriteResult {
+    bool success = false;
+    FsHistorySession session;
+};
 
 const QString kCurrentSessionIcon =
         QStringLiteral(":/images/library/ic_library_history_current.svg");
@@ -105,6 +112,11 @@ SetlogFeature::SetlogFeature(
           m_driveViewPlaylistId(kInvalidPlaylistId),
           m_pLibrary(pLibrary),
           m_pConfig(pConfig) {
+    // Opening and committing the portable SQLite history on a music USB can
+    // take long enough to visibly freeze the waveforms. Keep those writes off
+    // the GUI thread and serialize them so track order remains deterministic.
+    m_historyWritePool.setMaxThreadCount(1);
+
     // remove unneeded entries
     deleteAllUnlockedPlaylistsWithFewerTracks();
 
@@ -209,6 +221,10 @@ SetlogFeature::SetlogFeature(
 }
 
 SetlogFeature::~SetlogFeature() {
+    // Finish any final portable-history commit before the feature and its
+    // watcher children disappear during shutdown.
+    m_historyWritePool.waitForDone();
+
     // Clean up history when shutting down in case the track threshold changed,
     // incl. potentially empty current playlist
     deleteAllUnlockedPlaylistsWithFewerTracks();
@@ -545,38 +561,62 @@ void SetlogFeature::logTrackToDrive(const QString& mountRoot, const TrackPointer
     if (sessionName.isEmpty()) {
         return;
     }
-    if (!FsHistoryStore::appendTrack(mountRoot,
-                sessionName,
-                pTrack->getLocation(),
-                static_cast<int>(pTrack->getDuration()))) {
-        return;
-    }
-
-    updateDriveSessionItem(mountRoot, sessionName);
-
-    if (m_shownMountRoot != mountRoot || m_shownSessionName != sessionName) {
-        return;
-    }
-    // The session on screen just grew. Keep the selection the DJ may be working
-    // with (see the same dance in the local branch of slotPlayingTrackChanged).
     const TrackId trackId = pTrack->getId();
-    if (!trackId.isValid()) {
-        return;
-    }
-    WTrackTableView* pView = m_pLibraryWidget
-            ? dynamic_cast<WTrackTableView*>(m_pLibraryWidget->getActiveView())
-            : nullptr;
-    if (pView) {
-        const QList<TrackId> trackIds = pView->getSelectedTrackIds();
-        m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
-        pView->setSelectedTracks(trackIds);
-    } else {
-        m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
-    }
+    const QString trackLocation = pTrack->getLocation();
+    const int durationSeconds = static_cast<int>(pTrack->getDuration());
+
+    auto* pWatcher = new QFutureWatcher<DriveHistoryWriteResult>(this);
+    connect(pWatcher,
+            &QFutureWatcher<DriveHistoryWriteResult>::finished,
+            this,
+            [this, pWatcher, mountRoot, sessionName, trackId] {
+                const DriveHistoryWriteResult result = pWatcher->result();
+                pWatcher->deleteLater();
+                if (!result.success) {
+                    return;
+                }
+
+                // The worker already read the new totals while its USB
+                // connection was open. Updating the tree is now pure GUI work.
+                updateDriveSessionItem(mountRoot, result.session);
+
+                if (m_shownMountRoot != mountRoot ||
+                        m_shownSessionName != sessionName ||
+                        !trackId.isValid()) {
+                    return;
+                }
+                // The session on screen just grew. Keep the selection the DJ
+                // may be working with (see the local-history branch below).
+                WTrackTableView* pView = m_pLibraryWidget
+                        ? dynamic_cast<WTrackTableView*>(
+                                  m_pLibraryWidget->getActiveView())
+                        : nullptr;
+                if (pView) {
+                    const QList<TrackId> trackIds = pView->getSelectedTrackIds();
+                    m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
+                    pView->setSelectedTracks(trackIds);
+                } else {
+                    m_playlistDao.appendTrackToPlaylist(trackId, m_driveViewPlaylistId);
+                }
+            });
+
+    pWatcher->setFuture(QtConcurrent::run(&m_historyWritePool,
+            [mountRoot, sessionName, trackLocation, durationSeconds] {
+                DriveHistoryWriteResult result;
+                result.success = FsHistoryStore::appendTrack(mountRoot,
+                        sessionName,
+                        trackLocation,
+                        durationSeconds);
+                if (result.success) {
+                    result.success = FsHistoryStore::readSessionSummary(
+                            mountRoot, sessionName, &result.session);
+                }
+                return result;
+            }));
 }
 
 void SetlogFeature::updateDriveSessionItem(
-        const QString& mountRoot, const QString& sessionName) {
+        const QString& mountRoot, const FsHistorySession& session) {
     const QModelIndex volumeIndex = indexOfVolumeNode(mountRoot);
     if (!volumeIndex.isValid()) {
         return;
@@ -586,13 +626,9 @@ void SetlogFeature::updateDriveSessionItem(
         return;
     }
 
-    FsHistorySession session;
-    if (!FsHistoryStore::readSessionSummary(mountRoot, sessionName, &session)) {
-        return;
-    }
     const QString label = createPlaylistLabel(
             session.name, session.trackCount, session.durationSeconds);
-    const QString itemData = sessionNodeData(mountRoot, sessionName);
+    const QString itemData = sessionNodeData(mountRoot, session.name);
 
     const QList<TreeItem*> sessionItems = pVolumeItem->children();
     for (TreeItem* pSessionItem : sessionItems) {
