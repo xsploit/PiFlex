@@ -3747,6 +3747,26 @@
                 </options>
             </control>
             <control>
+                <group>[Library]</group>
+                <key>PrepareView</key>
+                <description>VIEW - long press - Open Prepare list</description>
+                <status>0x96</status>
+                <midino>0x67</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+            <control>
+                <group>[Library]</group>
+                <key>PrepareToggle</key>
+                <description>VIEW + SHIFT - toggle highlighted track in Prepare list</description>
+                <status>0x96</status>
+                <midino>0x68</midino>
+                <options>
+                    <normal/>
+                </options>
+            </control>
+            <control>
                 <group>[Channel1];5</group>
                 <key>PioneerDDJFLX6.keyboardButtonPressed</key>
                 <status>0x97</status>

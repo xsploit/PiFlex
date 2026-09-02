@@ -20,6 +20,9 @@ class PlaylistDAO : public QObject, public virtual DAO {
         PLHT_NOT_HIDDEN = 0,
         PLHT_AUTO_DJ = 1,
         PLHT_SET_LOG = 2,
+        // PiFlex's controller-first Prepare list. It uses the proven playlist
+        // storage/model without appearing in the desktop Playlists tree.
+        PLHT_PREPARE = 3,
         PLHT_UNKNOWN = -1
     };
 

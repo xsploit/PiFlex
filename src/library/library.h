@@ -28,6 +28,7 @@ class KeyboardEventFilter;
 class MixxxLibraryFeature;
 class PlayerManager;
 class PlaylistFeature;
+class PrepareFeature;
 class RecordingManager;
 class SidebarModel;
 class TrackCollectionManager;
@@ -103,6 +104,10 @@ class Library: public QObject {
     /// Triggers a new search in the internal track collection
     /// and shows the results by switching the view.
     void searchTracksInCollection(const QString& query);
+
+    // PiFlex Prepare/Tag List actions shared by touchscreen and controllers.
+    void toggleTracksInPrepare(const QList<TrackId>& trackIds);
+    void showPrepare();
 
     bool requestAddDir(const QString& directory);
     bool requestRemoveDir(const QString& directory, LibraryRemovalType removalType);
@@ -209,6 +214,7 @@ class Library: public QObject {
     WLibrary* m_pLibraryWidget;
     MixxxLibraryFeature* m_pMixxxLibraryFeature;
     PlaylistFeature* m_pPlaylistFeature;
+    PrepareFeature* m_pPrepareFeature;
     CrateFeature* m_pCrateFeature;
     AnalysisFeature* m_pAnalysisFeature;
     BrowseFeature* m_pBrowseFeature;

@@ -38,6 +38,7 @@
 #include "library/trackmodel.h"
 #include "library/trackset/crate/cratefeature.h"
 #include "library/trackset/playlistfeature.h"
+#include "library/trackset/preparefeature.h"
 #include "library/trackset/setlogfeature.h"
 #include "library/traktor/traktorfeature.h"
 #include "mixer/playermanager.h"
@@ -103,6 +104,7 @@ Library::Library(
           m_pLibraryWidget(nullptr),
           m_pMixxxLibraryFeature(nullptr),
           m_pPlaylistFeature(nullptr),
+          m_pPrepareFeature(nullptr),
           m_pCrateFeature(nullptr),
           m_pAnalysisFeature(nullptr) {
     qRegisterMetaType<LibraryRemovalType>("LibraryRemovalType");
@@ -177,6 +179,11 @@ Library::Library(
 
     m_pPlaylistFeature = new PlaylistFeature(this, UserSettingsPointer(m_pConfig));
     addFeature(m_pPlaylistFeature);
+
+    // A dedicated Tag List style source. It deliberately uses an internal
+    // hidden playlist, never a Rekordbox playlist on the removable drive.
+    m_pPrepareFeature = new PrepareFeature(this, UserSettingsPointer(m_pConfig));
+    addFeature(m_pPrepareFeature);
 
     m_pCrateFeature = new CrateFeature(this, m_pConfig);
     addFeature(m_pCrateFeature);
@@ -603,6 +610,19 @@ void Library::addFeature(LibraryFeature* feature) {
             &LibraryFeature::restoreModelState,
             this,
             &Library::restoreModelState);
+}
+
+void Library::toggleTracksInPrepare(const QList<TrackId>& trackIds) {
+    if (m_pPrepareFeature) {
+        m_pPrepareFeature->toggleTracks(trackIds);
+    }
+}
+
+void Library::showPrepare() {
+    if (!m_pPrepareFeature) {
+        return;
+    }
+    m_pPrepareFeature->activateAndSelect();
 }
 
 void Library::onPlayerManagerTrackAnalyzerProgress(

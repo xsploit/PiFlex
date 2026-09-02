@@ -103,6 +103,8 @@ class LibraryControl : public QObject {
     void slotAutoDjAddTop(double v);
     void slotAutoDjAddBottom(double v);
     void slotAutoDjAddReplace(double v);
+    void slotPrepareToggle(double v);
+    void slotPrepareView(double v);
 
     void maybeCreateGroupController(const QString& group);
     void slotNumDecksChanged(double v);
@@ -158,6 +160,10 @@ class LibraryControl : public QObject {
     std::unique_ptr<ControlObject> m_pAutoDjAddTop;
     std::unique_ptr<ControlObject> m_pAutoDjAddBottom;
     std::unique_ptr<ControlObject> m_pAutoDjAddReplace;
+
+    // PiFlex Prepare/Tag List controls.
+    std::unique_ptr<ControlObject> m_pPrepareToggle;
+    std::unique_ptr<ControlObject> m_pPrepareView;
 
     // Controls to sort the track view
     std::unique_ptr<ControlEncoder> m_pSortColumn;

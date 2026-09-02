@@ -26,6 +26,26 @@
               </LibraryBreadcrumb>
               <PushButton>
                 <ObjectName>SidebarButton</ObjectName>
+                <Size>86p,40p</Size>
+                <NumberStates>1</NumberStates>
+                <State><Number>0</Number><Text>Tag</Text></State>
+                <Connection>
+                  <ConfigKey>[Library],PrepareToggle</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+              <PushButton>
+                <ObjectName>SidebarButton</ObjectName>
+                <Size>110p,40p</Size>
+                <NumberStates>1</NumberStates>
+                <State><Number>0</Number><Text>Prepare</Text></State>
+                <Connection>
+                  <ConfigKey>[Library],PrepareView</ConfigKey>
+                  <EmitOnDownPress>true</EmitOnDownPress>
+                </Connection>
+              </PushButton>
+              <PushButton>
+                <ObjectName>SidebarButton</ObjectName>
                 <Size>100p,40p</Size>
                 <NumberStates>2</NumberStates>
                 <State>

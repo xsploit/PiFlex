@@ -263,6 +263,22 @@ LibraryControl::LibraryControl(Library* pLibrary)
                 &LibraryControl::slotAutoDjAddReplace);
     }
 
+    // PiFlex Tag List style controls. Toggle acts on the highlighted table
+    // rows; View opens the dedicated Prepare source and selects it in the
+    // sidebar. Both are usable from the skin and controller mappings.
+    m_pPrepareToggle = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "PrepareToggle"));
+    connect(m_pPrepareToggle.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            &LibraryControl::slotPrepareToggle);
+    m_pPrepareView = std::make_unique<ControlPushButton>(
+            ConfigKey("[Library]", "PrepareView"));
+    connect(m_pPrepareView.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            &LibraryControl::slotPrepareView);
+
     // Sort controls
     m_pSortColumn = std::make_unique<ControlEncoder>(ConfigKey("[Library]", "sort_column"));
     m_pSortOrder = std::make_unique<ControlPushButton>(ConfigKey("[Library]", "sort_order"));
@@ -863,6 +879,30 @@ void LibraryControl::slotMoveFocusForward(double v) {
         }
         slotMoveFocus(1);
     }
+}
+
+void LibraryControl::slotPrepareToggle(double v) {
+    if (!m_pLibraryWidget || v <= 0) {
+        return;
+    }
+    WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
+    if (pTrackTableView) {
+        m_pLibrary->toggleTracksInPrepare(pTrackTableView->getSelectedTrackIds());
+    }
+}
+
+void LibraryControl::slotPrepareView(double v) {
+    if (v <= 0) {
+        return;
+    }
+    // A controller may request Prepare while another main page is visible.
+    // Open Browse first when BiteDJ's tab control exists, then select Prepare.
+    if (ControlObject* pLibraryTab = ControlObject::getControl(
+                ConfigKey(QStringLiteral("[Tab]"), QStringLiteral("library")),
+                ControlFlag::NoWarnIfMissing)) {
+        pLibraryTab->set(1.0);
+    }
+    m_pLibrary->showPrepare();
 }
 
 void LibraryControl::slotMoveFocusBackward(double v) {
