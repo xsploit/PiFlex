@@ -47,6 +47,31 @@ find /opt/pflx/edmc-companion -type d -exec chmod 0755 {} +
 find /opt/pflx/edmc-companion -type f -exec chmod 0644 {} +
 find /opt/pflx/edmc-companion/node_modules/.bin -type f -exec chmod 0755 {} + 2>/dev/null || true
 
+# A user-level skin has priority over the copy shipped in resource-path. Early
+# PiFlex images installed BiteDJ under ~/.mixxx/skins, which silently pinned
+# the interface to that old version after later updates replaced the system
+# skin. Retire only that exact legacy override and keep it in the update backup.
+session_user=$(systemctl show pflx-session.service --property=User --value)
+case "$session_user" in
+    ''|root|*[!A-Za-z0-9_-]*)
+        echo 'Unable to identify the PiFlex session user safely' >&2
+        exit 1
+        ;;
+esac
+session_home=$(getent passwd "$session_user" | cut -d: -f6)
+case "$session_home" in
+    /home/*) ;;
+    *)
+        echo 'Refusing unexpected PiFlex session home' >&2
+        exit 1
+        ;;
+esac
+legacy_skin="$session_home/.mixxx/skins/BiteDJ"
+if [ -d "$legacy_skin" ] && [ ! -L "$legacy_skin" ]; then
+    install -d "$backup/home/$session_user/.mixxx/skins"
+    mv "$legacy_skin" "$backup/home/$session_user/.mixxx/skins/BiteDJ-user-override"
+fi
+
 systemctl restart pflx-edmc.service
 pkill -TERM -x mixxx 2>/dev/null || true
 printf 'Installed PFLX update %s; backup is %s\n' "$(cat "$stage/manifest.txt")" "$backup"
