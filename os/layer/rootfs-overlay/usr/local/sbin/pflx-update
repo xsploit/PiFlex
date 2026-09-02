@@ -27,7 +27,9 @@ if find "$stage" -type l -print -quit | grep -q .; then
     exit 1
 fi
 test -f "$stage/manifest.txt"
-test -x "$stage/payload/usr/local/bin/mixxx"
+# Archives assembled on Windows do not retain Unix executable mode bits.
+# The install step below always applies mode 0755 after verification.
+test -f "$stage/payload/usr/local/bin/mixxx"
 
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
 backup="/var/backups/pflx/$stamp"
