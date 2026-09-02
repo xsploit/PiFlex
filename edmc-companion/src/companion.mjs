@@ -5,6 +5,7 @@ import { BrowserSession } from "./browser-session.mjs";
 import { APP_VERSION, API_VERSION } from "./config.mjs";
 import { streamAudioDownload } from "./download.mjs";
 import { JobQueue } from "./job-queue.mjs";
+import { normalizeSettings } from "./settings.mjs";
 import { StateStore } from "./state-store.mjs";
 import { UsbLibrary } from "./usb-library.mjs";
 import { assertProviderId, readPreview, resolveOfficialDownload } from "./providers/beatexs.mjs";
@@ -27,6 +28,7 @@ export class Companion {
 
     async initialize() {
         const state = await this.stateStore.load();
+        this.usbLibrary.setSettings(state.settings);
         if (this.usbLibrary.rootPath) {
             await this.setStorage(this.usbLibrary.rootPath);
         } else if (state.usbRoot) {
@@ -45,6 +47,7 @@ export class Companion {
                 usbRoot: this.stateStore.value.usbRoot,
                 selected: Boolean(this.stateStore.value.usbRoot),
             },
+            settings: this.settings(),
             browser: this.browser.status(),
             activeJobs: this.jobs.list().filter((job) => ["queued", "running"].includes(job.state)),
         };
@@ -52,6 +55,20 @@ export class Companion {
 
     subscriptions() {
         return structuredClone(this.stateStore.value.subscriptions);
+    }
+
+    settings() {
+        return structuredClone(this.stateStore.value.settings);
+    }
+
+    async setSettings(value) {
+        this.ensureNoActiveJob("change settings");
+        const settings = normalizeSettings(value, this.stateStore.value.settings);
+        await this.stateStore.update((state) => {
+            state.settings = settings;
+        });
+        this.usbLibrary.setSettings(settings);
+        return this.settings();
     }
 
     releases() {

@@ -1,6 +1,7 @@
 const elements = Object.fromEntries([
     "overallStatus", "usbRoot", "saveUsb", "storageStatus", "signIn", "checkAuth",
-    "closeBrowser", "authStatus", "subscriptions", "releases", "jobs", "refreshView", "toast",
+    "downloadFolder", "organizeByGenre", "saveSettings", "closeBrowser", "authStatus",
+    "subscriptions", "releases", "jobs", "refreshView", "toast",
 ].map((id) => [id, document.getElementById(id)]));
 
 let subscriptions = [];
@@ -53,6 +54,10 @@ function renderStatus(status) {
     elements.storageStatus.textContent = status.storage.usbRoot || "No USB selected.";
     if (status.storage.usbRoot && document.activeElement !== elements.usbRoot) {
         elements.usbRoot.value = status.storage.usbRoot;
+    }
+    if (status.settings && document.activeElement !== elements.downloadFolder) {
+        elements.downloadFolder.value = status.settings.downloadFolder;
+        elements.organizeByGenre.checked = status.settings.organizeByGenre;
     }
 }
 
@@ -155,6 +160,13 @@ async function queue(path, body) {
 
 elements.saveUsb.addEventListener("click", () => action(() => api("/v1/storage", {
     method: "POST", body: JSON.stringify({ path: elements.usbRoot.value.trim() }),
+})));
+elements.saveSettings.addEventListener("click", () => action(() => api("/v1/settings", {
+    method: "PUT",
+    body: JSON.stringify({
+        downloadFolder: elements.downloadFolder.value.trim(),
+        organizeByGenre: elements.organizeByGenre.checked,
+    }),
 })));
 elements.signIn.addEventListener("click", () => action(() => api("/v1/auth/open", { method: "POST" })));
 elements.checkAuth.addEventListener("click", () => queue("/v1/auth/check", {}));

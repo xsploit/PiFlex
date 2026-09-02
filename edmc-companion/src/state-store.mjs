@@ -2,6 +2,7 @@ import path from "node:path";
 
 import { readJson, writeJsonAtomic } from "./atomic-json.mjs";
 import { createDefaultState } from "./default-state.mjs";
+import { normalizeSettings } from "./settings.mjs";
 
 export class StateStore {
     constructor(dataDir) {
@@ -17,6 +18,7 @@ export class StateStore {
         }
         loaded.catalog = Array.isArray(loaded.catalog) ? loaded.catalog : [];
         loaded.browse = loaded.browse && typeof loaded.browse === "object" ? loaded.browse : null;
+        loaded.settings = normalizeSettings(loaded.settings || {});
         this.value = loaded;
         return this.value;
     }

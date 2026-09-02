@@ -1,3 +1,5 @@
+import { DEFAULT_SETTINGS } from "./settings.mjs";
+
 export const DEFAULT_SUBSCRIPTIONS = Object.freeze([
     { id: "jump-up", name: "Jump-Up", url: "https://edmc.to/genre/jump-up-145/", enabled: true, newestSeenTopicId: null },
     { id: "jungle-ragga", name: "Jungle / Ragga", url: "https://edmc.to/genre/jungleragga-122/", enabled: false, newestSeenTopicId: null },
@@ -11,6 +13,7 @@ export function createDefaultState() {
     return {
         version: 1,
         usbRoot: null,
+        settings: structuredClone(DEFAULT_SETTINGS),
         auth: {
             state: "unknown",
             checkedAt: null,

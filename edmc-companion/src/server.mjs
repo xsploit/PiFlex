@@ -38,6 +38,12 @@ async function route(companion, request, response) {
     if (method === "POST" && url.pathname === "/v1/storage") {
         return sendJson(response, 200, await companion.setStorage((await readBody(request)).path));
     }
+    if (method === "GET" && url.pathname === "/v1/settings") {
+        return sendJson(response, 200, companion.settings());
+    }
+    if (method === "PUT" && url.pathname === "/v1/settings") {
+        return sendJson(response, 200, await companion.setSettings(await readBody(request)));
+    }
     if (method === "POST" && url.pathname === "/v1/ui/open") {
         return sendJson(response, 200, await companion.openUi());
     }

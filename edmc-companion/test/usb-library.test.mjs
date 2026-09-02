@@ -41,6 +41,22 @@ test("USB library allocates and atomically indexes a portable track", async (con
     assert.deepEqual(await library.findByProviderId("moivo1mapbvk"), entry);
 });
 
+test("USB library honors a custom flat download folder", async (context) => {
+    const root = await fs.mkdtemp(path.join(os.tmpdir(), "bitedj-edmc-usb-custom-"));
+    context.after(() => fs.rm(root, { recursive: true, force: true }));
+    const library = new UsbLibrary(root, {
+        downloadFolder: "Music/Fresh",
+        organizeByGenre: false,
+    });
+    const allocation = await library.allocateDownload({
+        topicId: 1,
+        title: "Custom Destination",
+        subscriptionName: "Jump-Up",
+    }, "provider", "job-custom");
+    const finalPath = await library.allocateFinalPath(allocation, ".wav");
+    assert.equal(finalPath, path.join(root, "Music", "Fresh", "Custom Destination.wav"));
+});
+
 test("USB library rebuilds a zero-byte index from existing state downloads", async (context) => {
     const root = await fs.mkdtemp(path.join(os.tmpdir(), "bitedj-edmc-usb-recover-"));
     context.after(() => fs.rm(root, { recursive: true, force: true }));

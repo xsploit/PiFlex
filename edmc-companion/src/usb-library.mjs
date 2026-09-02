@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { readJson, writeJsonAtomic } from "./atomic-json.mjs";
 import { assertSupportedAudio } from "./download.mjs";
+import { DEFAULT_SETTINGS, normalizeSettings } from "./settings.mjs";
 
 const EMPTY_LIBRARY = Object.freeze({ version: 1, updatedAt: null, tracks: [] });
 
@@ -22,12 +23,17 @@ export function isPathInside(rootPath, candidatePath) {
 }
 
 export class UsbLibrary {
-    constructor(rootPath = null) {
+    constructor(rootPath = null, settings = DEFAULT_SETTINGS) {
         this.rootPath = rootPath ? path.resolve(rootPath) : null;
+        this.settings = normalizeSettings(settings);
     }
 
     setRoot(rootPath) {
         this.rootPath = path.resolve(rootPath);
+    }
+
+    setSettings(settings) {
+        this.settings = normalizeSettings(settings, this.settings);
     }
 
     requireRoot() {
@@ -171,7 +177,12 @@ export class UsbLibrary {
     async allocateDownload(release, providerId, jobId) {
         await this.verifyWritable();
         const subsectionName = safePathSegment(release.subscriptionName, "EDMC");
-        const finalDirectory = path.join(this.requireRoot(), "Music", "EDMC", subsectionName);
+        const destinationSegments = this.settings.downloadFolder.split("/");
+        const finalDirectory = path.join(
+            this.requireRoot(),
+            ...destinationSegments,
+            ...(this.settings.organizeByGenre ? [subsectionName] : []),
+        );
         await fs.mkdir(finalDirectory, { recursive: true });
 
         const partPath = path.join(this.incomingRoot, `${safePathSegment(jobId, "download")}.part`);

@@ -20,7 +20,7 @@ system Chromium + dedicated persistent profile
         |
         | streaming download; Chromium can close after URL resolution
         v
-selected USB/Music/EDMC/<subsection>/<track>.(mp3|flac|wav)
+selected USB/<configured folder>/<optional subsection>/<track>.(mp3|flac|wav)
 selected USB/.bitedj/edmc/library.json
 ```
 
@@ -35,7 +35,9 @@ building blocks that stay.
   visible companion window already exists.
 - Only one browser job runs at a time.
 - The browser is not kept alive by the service when it has no work.
-- The final media transfer is streamed directly to the selected USB. A track
+- The final media transfer is streamed directly to the selected USB. The
+  default destination is `Music/EDMC/<subsection>`, but the folder and whether
+  subsection folders are used are persisted settings. A track
   is first written under `.bitedj/edmc/incoming`, synchronized, identified by
   its MP3, FLAC, or WAV magic bytes, and renamed onto `Music/EDMC` with the
   verified extension on the same filesystem.
@@ -65,6 +67,8 @@ Local state and the Chromium profile live below
 - `GET /v1/subscriptions`
 - `PUT /v1/subscriptions`
 - `POST /v1/storage` with `{ "path": "/media/..." }`
+- `GET /v1/settings`
+- `PUT /v1/settings` with `{ "downloadFolder": "Music/EDMC", "organizeByGenre": true }`
 - `POST /v1/ui/open`
 - `POST /v1/auth/open`
 - `POST /v1/auth/check`
