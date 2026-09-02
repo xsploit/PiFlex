@@ -1117,11 +1117,11 @@
                     <Children>
                       <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Main View</Text><Size>0me,0me</Size></Label>
                       <WidgetGroup>
-                        <ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>174f,40f</Size>
+                        <ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>192f,40f</Size>
                         <Children>
                           <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">PiFlex</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">0</SetVariable></Template>
                           <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">XDJ</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">1</SetVariable></Template>
-                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Pioneered</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">2</SetVariable></Template>
+                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Pioneer</SetVariable><SetVariable name="ConfigKey">[BiteDJ],main_view_style</SetVariable><SetVariable name="Value">2</SetVariable></Template>
                         </Children>
                       </WidgetGroup>
                     </Children>
@@ -1134,11 +1134,11 @@
                     <Children>
                       <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Visual Theme</Text><Size>0me,0me</Size></Label>
                       <WidgetGroup>
-                        <ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>174f,40f</Size>
+                        <ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>192f,40f</Size>
                         <Children>
                           <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">PiFlex</SetVariable><SetVariable name="ConfigKey">[BiteDJ],visual_theme</SetVariable><SetVariable name="Value">0</SetVariable></Template>
                           <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">XDJ</SetVariable><SetVariable name="ConfigKey">[BiteDJ],visual_theme</SetVariable><SetVariable name="Value">1</SetVariable></Template>
-                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Pioneered</SetVariable><SetVariable name="ConfigKey">[BiteDJ],visual_theme</SetVariable><SetVariable name="Value">2</SetVariable></Template>
+                          <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Pioneer</SetVariable><SetVariable name="ConfigKey">[BiteDJ],visual_theme</SetVariable><SetVariable name="Value">2</SetVariable></Template>
                         </Children>
                       </WidgetGroup>
                     </Children>
