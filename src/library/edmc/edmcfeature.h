@@ -4,14 +4,17 @@
 #include <QJsonObject>
 #include <QNetworkAccessManager>
 #include <QPointer>
+#include <QSet>
 #include <QTimer>
 #include <QVariantMap>
+#include <memory>
 
 #include "library/libraryfeature.h"
 #include "library/treeitemmodel.h"
 #include "util/parented_ptr.h"
 
 class ControlProxy;
+class ControlPushButton;
 class EdmcBrowserView;
 class QNetworkReply;
 
@@ -24,6 +27,7 @@ class EdmcFeature final : public LibraryFeature {
 
   public:
     EdmcFeature(Library* pLibrary, UserSettingsPointer pConfig);
+    ~EdmcFeature() override;
 
     QVariant title() override;
     TreeItemModel* sidebarModel() const override;
@@ -42,11 +46,14 @@ class EdmcFeature final : public LibraryFeature {
     void loadSelectedDeck2();
     void onReplyFinished();
     void refreshAll();
+    void pushSettings();
+    void openSetup();
 
   private:
     enum class HttpMethod {
         Get,
         Post,
+        Put,
     };
 
     void request(const QString& operation,
@@ -60,6 +67,7 @@ class EdmcFeature final : public LibraryFeature {
     void render();
     QJsonObject releaseForTopic(qint64 topicId) const;
     void loadDownloadedTrack(qint64 topicId, const QString& group, bool play);
+    void addCompletedDownloadToLibrary(const QJsonObject& job);
     bool hasActiveJobs() const;
 
     enum class Screen {
@@ -74,6 +82,10 @@ class EdmcFeature final : public LibraryFeature {
     parented_ptr<ControlProxy> m_pLoadDeck2Control;
     parented_ptr<ControlProxy> m_pPreviewPlayControl;
     parented_ptr<ControlProxy> m_pPreviewStopControl;
+    std::unique_ptr<ControlPushButton> m_pDownloadFolderMode;
+    std::unique_ptr<ControlPushButton> m_pOrganizeByGenre;
+    std::unique_ptr<ControlPushButton> m_pAutoAddDownloads;
+    std::unique_ptr<ControlPushButton> m_pOpenSetup;
     QPointer<EdmcBrowserView> m_pView;
     QNetworkAccessManager m_network;
     QTimer m_pollTimer;
@@ -81,6 +93,7 @@ class EdmcFeature final : public LibraryFeature {
     QJsonArray m_catalog;
     QJsonObject m_browse;
     QJsonArray m_jobs;
+    QSet<QString> m_importedDownloads;
     QString m_message;
     QString m_trackedJobId;
     QString m_trackedAction;

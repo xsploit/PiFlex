@@ -8,6 +8,7 @@
 #include <QNetworkRequest>
 
 #include "control/controlproxy.h"
+#include "control/controlpushbutton.h"
 #include "controllers/keyboard/keyboardeventfilter.h"
 #include "library/edmc/edmcbrowserview.h"
 #include "library/library.h"
@@ -21,6 +22,20 @@ namespace {
 
 const QString kViewName = QStringLiteral("EDMCHOME");
 const QUrl kApiBase(QStringLiteral("http://127.0.0.1:17642"));
+const QString kEdmcGroup = QStringLiteral("[EDMC]");
+
+QString fileOnSelectedUsb(const QString& usbRoot, const QString& relativePath) {
+    if (usbRoot.isEmpty() || relativePath.isEmpty() || QDir::isAbsolutePath(relativePath)) {
+        return {};
+    }
+    const QString cleanRelativePath = QDir::cleanPath(relativePath);
+    if (cleanRelativePath == QStringLiteral("..") ||
+            cleanRelativePath.startsWith(QStringLiteral("../")) ||
+            cleanRelativePath.startsWith(QStringLiteral("..\\"))) {
+        return {};
+    }
+    return QDir(usbRoot).absoluteFilePath(cleanRelativePath);
+}
 
 } // namespace
 
@@ -39,6 +54,38 @@ EdmcFeature::EdmcFeature(Library* pLibrary, UserSettingsPointer pConfig)
             QStringLiteral("[PreviewDeck1]"), QStringLiteral("play"), this);
     m_pPreviewStopControl = make_parented<ControlProxy>(
             QStringLiteral("[PreviewDeck1]"), QStringLiteral("stop"), this);
+
+    m_pDownloadFolderMode = std::make_unique<ControlPushButton>(
+            ConfigKey(kEdmcGroup, QStringLiteral("download_folder_mode")), true, 0.0);
+    m_pDownloadFolderMode->setButtonMode(ControlPushButton::TOGGLE);
+    m_pDownloadFolderMode->setStates(4);
+    m_pOrganizeByGenre = std::make_unique<ControlPushButton>(
+            ConfigKey(kEdmcGroup, QStringLiteral("organize_by_genre")), true, 1.0);
+    m_pOrganizeByGenre->setButtonMode(ControlPushButton::TOGGLE);
+    m_pOrganizeByGenre->setStates(2);
+    m_pAutoAddDownloads = std::make_unique<ControlPushButton>(
+            ConfigKey(kEdmcGroup, QStringLiteral("auto_add_downloads")), true, 1.0);
+    m_pAutoAddDownloads->setButtonMode(ControlPushButton::TOGGLE);
+    m_pAutoAddDownloads->setStates(2);
+    m_pOpenSetup = std::make_unique<ControlPushButton>(
+            ConfigKey(kEdmcGroup, QStringLiteral("open_setup")));
+
+    connect(m_pDownloadFolderMode.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            &EdmcFeature::pushSettings);
+    connect(m_pOrganizeByGenre.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            &EdmcFeature::pushSettings);
+    connect(m_pOpenSetup.get(),
+            &ControlPushButton::valueChanged,
+            this,
+            [this](double value) {
+                if (value > 0.0) {
+                    openSetup();
+                }
+            });
     m_pLoadDeck1Control->connectValueChanged(this, [this](double value) {
         if (value > 0.0 && isViewActive()) {
             loadSelectedDeck1();
@@ -55,6 +102,8 @@ EdmcFeature::EdmcFeature(Library* pLibrary, UserSettingsPointer pConfig)
         }
     });
 }
+
+EdmcFeature::~EdmcFeature() = default;
 
 QVariant EdmcFeature::title() {
     return tr("EDMC");
@@ -85,10 +134,45 @@ void EdmcFeature::activate() {
     emit disableSearch();
     emit enableCoverArtDisplay(false);
     m_screen = Screen::Categories;
-    refreshAll();
+    // Re-apply the saved BiteDJ choices whenever EDMC is opened. This also
+    // recovers cleanly if the companion started after BiteDJ.
+    pushSettings();
     if (!m_pollTimer.isActive()) {
         m_pollTimer.start();
     }
+}
+
+void EdmcFeature::pushSettings() {
+    QJsonObject body;
+    switch (qRound(m_pDownloadFolderMode->get())) {
+    case 0:
+        body.insert(QStringLiteral("downloadFolder"), QStringLiteral("Music/EDMC"));
+        break;
+    case 1:
+        body.insert(QStringLiteral("downloadFolder"), QStringLiteral("Music/Downloads"));
+        break;
+    case 2:
+        body.insert(QStringLiteral("downloadFolder"), QStringLiteral("EDMC"));
+        break;
+    default:
+        // Custom leaves the companion's text value alone. The Setup button
+        // opens the local page where the USB and arbitrary relative path live.
+        break;
+    }
+    body.insert(QStringLiteral("organizeByGenre"), m_pOrganizeByGenre->toBool());
+    request(QStringLiteral("settings-update"),
+            HttpMethod::Put,
+            QStringLiteral("/v1/settings"),
+            body);
+}
+
+void EdmcFeature::openSetup() {
+    // Opening the free-form page means its folder choice becomes authoritative
+    // until the DJ explicitly picks one of the three presets again.
+    m_pDownloadFolderMode->set(3.0);
+    request(QStringLiteral("setup-open"),
+            HttpMethod::Post,
+            QStringLiteral("/v1/ui/open"));
 }
 
 void EdmcFeature::refreshAll() {
@@ -111,6 +195,8 @@ void EdmcFeature::request(const QString& operation,
     QNetworkReply* pReply = nullptr;
     if (method == HttpMethod::Post) {
         pReply = m_network.post(networkRequest, QJsonDocument(body).toJson(QJsonDocument::Compact));
+    } else if (method == HttpMethod::Put) {
+        pReply = m_network.put(networkRequest, QJsonDocument(body).toJson(QJsonDocument::Compact));
     } else {
         pReply = m_network.get(networkRequest);
     }
@@ -154,6 +240,9 @@ void EdmcFeature::onReplyFinished() {
         m_browse = document.isObject() ? document.object() : QJsonObject{};
     } else if (operation == QStringLiteral("jobs") && document.isArray()) {
         m_jobs = document.array();
+        for (const QJsonValue& value : m_jobs) {
+            addCompletedDownloadToLibrary(value.toObject());
+        }
         if (!m_trackedJobId.isEmpty()) {
             for (const QJsonValue& value : m_jobs) {
                 const QJsonObject job = value.toObject();
@@ -184,6 +273,12 @@ void EdmcFeature::onReplyFinished() {
                 break;
             }
         }
+    } else if (operation == QStringLiteral("settings-update") && document.isObject()) {
+        m_status.insert(QStringLiteral("settings"), document.object());
+        m_message = tr("EDMC download settings saved");
+        QTimer::singleShot(100, this, &EdmcFeature::refreshAll);
+    } else if (operation == QStringLiteral("setup-open")) {
+        m_message = tr("EDMC USB and custom-folder setup opened");
     } else if (operation.startsWith(QStringLiteral("action:"))) {
         const QString action = operation.mid(QStringLiteral("action:").size());
         if (document.isObject()) {
@@ -200,6 +295,41 @@ void EdmcFeature::onReplyFinished() {
     // a rapid refresh loop. Paint once after the complete snapshot arrives.
     if (m_pendingRequests == 0) {
         render();
+    }
+}
+
+void EdmcFeature::addCompletedDownloadToLibrary(const QJsonObject& job) {
+    if (!m_pAutoAddDownloads->toBool() ||
+            job.value(QStringLiteral("kind")).toString() != QStringLiteral("download") ||
+            job.value(QStringLiteral("state")).toString() != QStringLiteral("completed")) {
+        return;
+    }
+    const QJsonObject track = job.value(QStringLiteral("result"))
+                                      .toObject()
+                                      .value(QStringLiteral("track"))
+                                      .toObject();
+    const QString relativePath = track.value(QStringLiteral("relativePath")).toString();
+    const QString importKey = track.value(QStringLiteral("providerId")).toString().isEmpty()
+            ? relativePath
+            : track.value(QStringLiteral("providerId")).toString();
+    const QString usbRoot = m_status.value(QStringLiteral("storage"))
+                                    .toObject()
+                                    .value(QStringLiteral("usbRoot"))
+                                    .toString();
+    if (relativePath.isEmpty() || importKey.isEmpty() || usbRoot.isEmpty() ||
+            m_importedDownloads.contains(importKey)) {
+        return;
+    }
+    const QString absolutePath = fileOnSelectedUsb(usbRoot, relativePath);
+    if (absolutePath.isEmpty()) {
+        return;
+    }
+    if (!QFileInfo::exists(absolutePath)) {
+        return;
+    }
+    if (m_pLibrary->trackCollectionManager()->getOrAddTrack(
+                TrackRef::fromFilePath(absolutePath))) {
+        m_importedDownloads.insert(importKey);
     }
 }
 
@@ -361,7 +491,12 @@ void EdmcFeature::loadDownloadedTrack(
         render();
         return;
     }
-    const QString absolutePath = QDir(usbRoot).filePath(relativePath);
+    const QString absolutePath = fileOnSelectedUsb(usbRoot, relativePath);
+    if (absolutePath.isEmpty()) {
+        m_message = tr("Downloaded track path is invalid");
+        render();
+        return;
+    }
     if (!QFileInfo::exists(absolutePath)) {
         m_message = tr("Downloaded file is missing from the USB: %1").arg(absolutePath);
         render();
@@ -396,11 +531,14 @@ void EdmcFeature::render() {
     }
     const QJsonObject auth = m_status.value(QStringLiteral("auth")).toObject();
     const QJsonObject storage = m_status.value(QStringLiteral("storage")).toObject();
+    const QJsonObject settings = m_status.value(QStringLiteral("settings")).toObject();
     const QString usbRoot = storage.value(QStringLiteral("usbRoot")).toString();
+    const QString downloadFolder = settings.value(QStringLiteral("downloadFolder")).toString();
 
-    const QString statusText = tr("%1   |   USB: %2")
+    const QString statusText = tr("%1   |   USB: %2   |   Save: %3")
                                        .arg(auth.value(QStringLiteral("message")).toString(),
-                                               usbRoot.isEmpty() ? tr("not selected") : usbRoot);
+                                               usbRoot.isEmpty() ? tr("not selected") : usbRoot,
+                                               downloadFolder.isEmpty() ? tr("not set") : downloadFolder);
     QString title = tr("EDMC  /  Music");
     QList<QVariantMap> rows;
 

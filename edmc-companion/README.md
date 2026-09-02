@@ -39,8 +39,8 @@ building blocks that stay.
   default destination is `Music/EDMC/<subsection>`, but the folder and whether
   subsection folders are used are persisted settings. A track
   is first written under `.bitedj/edmc/incoming`, synchronized, identified by
-  its MP3, FLAC, or WAV magic bytes, and renamed onto `Music/EDMC` with the
-  verified extension on the same filesystem.
+  its MP3, FLAC, or WAV magic bytes, and renamed into the configured folder
+  with the verified extension on the same filesystem.
 - `library.json` is also replaced atomically. It is the future source for the
   BiteDJ `EDMC Downloads` library feature.
 - The service is intended to run with low CPU and I/O weight. BiteDJ remains

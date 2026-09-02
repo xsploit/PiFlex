@@ -62,7 +62,6 @@ export class Companion {
     }
 
     async setSettings(value) {
-        this.ensureNoActiveJob("change settings");
         const settings = normalizeSettings(value, this.stateStore.value.settings);
         await this.stateStore.update((state) => {
             state.settings = settings;

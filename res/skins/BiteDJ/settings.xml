@@ -34,6 +34,10 @@
             <SetVariable name="Text">System</SetVariable>
             <SetVariable name="ConfigKey">system</SetVariable>
           </Template>
+          <Template src="skin:templates/setting_subtab_button.xml">
+            <SetVariable name="Text">EDMC</SetVariable>
+            <SetVariable name="ConfigKey">edmc</SetVariable>
+          </Template>
         </Children>
       </WidgetGroup>
 
@@ -1194,6 +1198,76 @@
                   <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
                 </Children>
               </WidgetGroup>
+
+            </Children>
+          </WidgetGroup>
+
+          <!-- Kept as the last stack child so the hard-coded Device index and
+               every existing persisted SettingsTab index remain stable. -->
+          <WidgetGroup trigger="[SettingsTab],edmc">
+            <ObjectName>SettingsPanel</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>me,me</SizePolicy>
+            <Children>
+
+              <Label>
+                <ObjectName>SettingsHeader</ObjectName>
+                <Text>EDMC Downloads</Text>
+                <Size>0me,32f</Size>
+              </Label>
+
+              <WidgetGroup>
+                <ObjectName>SettingsRow</ObjectName>
+                <Layout>horizontal</Layout>
+                <Size>0me,52f</Size>
+                <Children>
+                  <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Save To</Text><Size>0me,0me</Size></Label>
+                  <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>340f,40f</Size><Children>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Music/EDMC</SetVariable><SetVariable name="ConfigKey">[EDMC],download_folder_mode</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">Downloads</SetVariable><SetVariable name="ConfigKey">[EDMC],download_folder_mode</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentMid</SetVariable><SetVariable name="Text">USB/EDMC</SetVariable><SetVariable name="ConfigKey">[EDMC],download_folder_mode</SetVariable><SetVariable name="Value">2</SetVariable></Template>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Custom</SetVariable><SetVariable name="ConfigKey">[EDMC],download_folder_mode</SetVariable><SetVariable name="Value">3</SetVariable></Template>
+                  </Children></WidgetGroup>
+                </Children>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                <Children>
+                  <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Folders</Text><Size>0me,0me</Size></Label>
+                  <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>180f,40f</Size><Children>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Flat</SetVariable><SetVariable name="ConfigKey">[EDMC],organize_by_genre</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">By Genre</SetVariable><SetVariable name="ConfigKey">[EDMC],organize_by_genre</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                  </Children></WidgetGroup>
+                </Children>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                <Children>
+                  <Label><ObjectName>SettingsRowLabel</ObjectName><Text>All Tracks</Text><Size>0me,0me</Size></Label>
+                  <WidgetGroup><ObjectName>SettingsSegmented</ObjectName><Layout>horizontal</Layout><Size>180f,40f</Size><Children>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable><SetVariable name="Text">Manual</SetVariable><SetVariable name="ConfigKey">[EDMC],auto_add_downloads</SetVariable><SetVariable name="Value">0</SetVariable></Template>
+                    <Template src="skin:templates/setting_segment_button.xml"><SetVariable name="ObjectName">SettingsSegmentRight</SetVariable><SetVariable name="Text">Auto Add</SetVariable><SetVariable name="ConfigKey">[EDMC],auto_add_downloads</SetVariable><SetVariable name="Value">1</SetVariable></Template>
+                  </Children></WidgetGroup>
+                </Children>
+              </WidgetGroup>
+
+              <WidgetGroup>
+                <ObjectName>SettingsRow</ObjectName><Layout>horizontal</Layout><Size>0me,52f</Size>
+                <Children>
+                  <Label><ObjectName>SettingsRowLabel</ObjectName><Text>USB / Custom</Text><Size>0me,0me</Size></Label>
+                  <PushButton><ObjectName>SettingsActionButton</ObjectName><Size>180f,40f</Size><NumberStates>1</NumberStates><State><Number>0</Number><Text>Open Setup</Text></State><Connection><ConfigKey>[EDMC],open_setup</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection></PushButton>
+                </Children>
+              </WidgetGroup>
+
+              <Label>
+                <ObjectName>SettingsRowHint</ObjectName>
+                <Text>Open Setup selects Custom. Paths stay inside the USB and affect new downloads only.</Text>
+                <Alignment>center</Alignment>
+                <Size>0me,32f</Size>
+              </Label>
+              <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
 
             </Children>
           </WidgetGroup>
