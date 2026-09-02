@@ -124,6 +124,7 @@ void EdmcFeature::bindLibraryWidget(
     connect(pView, &EdmcBrowserView::previewRequested, this, &EdmcFeature::previewSelected);
     connect(pView, &EdmcBrowserView::loadDeck1Requested, this, &EdmcFeature::loadSelectedDeck1);
     connect(pView, &EdmcBrowserView::loadDeck2Requested, this, &EdmcFeature::loadSelectedDeck2);
+    connect(pView, &EdmcBrowserView::searchRequested, this, &EdmcFeature::searchMusic);
     pLibraryWidget->registerView(kViewName, pView);
     m_pView = pView;
     render();
@@ -406,6 +407,7 @@ void EdmcFeature::openGenre(const QVariantMap& row) {
 
 void EdmcFeature::openFormats(qint64 topicId) {
     m_selectedTopicId = topicId;
+    m_formatsParentScreen = m_screen;
     m_screen = Screen::Formats;
     const QJsonObject release = releaseForTopic(topicId);
     if (release.value(QStringLiteral("providers")).toArray().isEmpty()) {
@@ -422,16 +424,37 @@ void EdmcFeature::openFormats(qint64 topicId) {
 
 void EdmcFeature::back() {
     if (m_screen == Screen::Formats) {
-        m_screen = Screen::Releases;
+        m_screen = m_formatsParentScreen;
         m_selectedTopicId = 0;
     } else if (m_screen == Screen::Releases) {
         m_screen = Screen::Genres;
+    } else if (m_screen == Screen::SearchResults) {
+        m_screen = Screen::Categories;
     } else if (m_screen == Screen::Genres) {
         m_screen = Screen::Categories;
         m_selectedCategory = -1;
     }
     m_message.clear();
     render();
+}
+
+void EdmcFeature::searchMusic(const QString& query) {
+    const QString normalized = query.simplified();
+    if (normalized.size() < 2) {
+        m_message = tr("Enter at least two characters to search EDMC Music");
+        render();
+        return;
+    }
+    m_screen = Screen::SearchResults;
+    m_browse = {{QStringLiteral("mode"), QStringLiteral("search")},
+            {QStringLiteral("query"), normalized},
+            {QStringLiteral("releases"), QJsonArray{}}};
+    m_message = tr("Searching EDMC Music for %1").arg(normalized);
+    render();
+    request(QStringLiteral("action:Search"),
+            HttpMethod::Post,
+            QStringLiteral("/v1/search"),
+            {{QStringLiteral("query"), normalized}});
 }
 
 qint64 EdmcFeature::selectedTopicId() const {
@@ -570,14 +593,21 @@ void EdmcFeature::render() {
                     {QStringLiteral("url"), url},
                     {QStringLiteral("label"), QStringLiteral("%1   >").arg(name)}});
         }
-    } else if (m_screen == Screen::Releases) {
+    } else if (m_screen == Screen::Releases ||
+            m_screen == Screen::SearchResults) {
         const int currentPage = m_browse.value(QStringLiteral("page")).toInt(1);
         const int lastPage = m_browse.value(QStringLiteral("lastPage")).toInt(1);
-        title += QStringLiteral("  /  %1  /  Page %2 of %3")
-                         .arg(m_browse.value(QStringLiteral("genreName")).toString())
-                         .arg(currentPage)
-                         .arg(lastPage);
-        if (m_browse.value(QStringLiteral("hasPrevious")).toBool()) {
+        if (m_screen == Screen::SearchResults) {
+            title += QStringLiteral("  /  Search: %1")
+                             .arg(m_browse.value(QStringLiteral("query")).toString());
+        } else {
+            title += QStringLiteral("  /  %1  /  Page %2 of %3")
+                             .arg(m_browse.value(QStringLiteral("genreName")).toString())
+                             .arg(currentPage)
+                             .arg(lastPage);
+        }
+        if (m_screen == Screen::Releases &&
+                m_browse.value(QStringLiteral("hasPrevious")).toBool()) {
             rows.append({{QStringLiteral("key"), QStringLiteral("page:%1").arg(currentPage - 1)},
                     {QStringLiteral("action"), QStringLiteral("page")},
                     {QStringLiteral("page"), currentPage - 1},
@@ -617,6 +647,11 @@ void EdmcFeature::render() {
             } else if (jobState == QStringLiteral("failed")) {
                 prefix = QStringLiteral("[FAILED: %1]  ").arg(jobMessage);
             }
+            const QString sourceName = release.value(QStringLiteral("subscriptionName"))
+                                               .toString()
+                                               .isEmpty()
+                    ? release.value(QStringLiteral("genreName")).toString()
+                    : release.value(QStringLiteral("subscriptionName")).toString();
             rows.append({{QStringLiteral("key"), QStringLiteral("release:%1").arg(topicId)},
                     {QStringLiteral("action"), QStringLiteral("release")},
                     {QStringLiteral("topicId"), topicId},
@@ -624,10 +659,11 @@ void EdmcFeature::render() {
                     {QStringLiteral("busy"), busy},
                     {QStringLiteral("label"), QStringLiteral("%1%2   |   %3")
                                                          .arg(prefix,
-                                                                 release.value(QStringLiteral("title")).toString(),
-                                                                 release.value(QStringLiteral("subscriptionName")).toString())}});
+                                                         release.value(QStringLiteral("title")).toString(),
+                                                                 sourceName)}});
         }
-        if (m_browse.value(QStringLiteral("hasNext")).toBool()) {
+        if (m_screen == Screen::Releases &&
+                m_browse.value(QStringLiteral("hasNext")).toBool()) {
             rows.append({{QStringLiteral("key"), QStringLiteral("page:%1").arg(currentPage + 1)},
                     {QStringLiteral("action"), QStringLiteral("page")},
                     {QStringLiteral("page"), currentPage + 1},

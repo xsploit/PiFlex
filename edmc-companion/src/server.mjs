@@ -71,6 +71,9 @@ async function route(companion, request, response) {
     if (method === "POST" && url.pathname === "/v1/browse") {
         return sendJson(response, 202, companion.enqueueBrowse(await readBody(request)));
     }
+    if (method === "POST" && url.pathname === "/v1/search") {
+        return sendJson(response, 202, companion.enqueueSearch(await readBody(request)));
+    }
     if (method === "POST" && url.pathname === "/v1/refresh") {
         return sendJson(response, 202, companion.enqueueRefresh((await readBody(request)).subscriptionId));
     }

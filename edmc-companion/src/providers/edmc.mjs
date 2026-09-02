@@ -78,6 +78,60 @@ export async function readGenreListing(page, genreUrl, pageNumber = 1) {
     });
 }
 
+export async function readMusicSearch(page, query, nodeIds) {
+    const normalizedQuery = assertEdmcSearchQuery(query);
+    const normalizedNodeIds = [...new Set(nodeIds.map((value) => Number(value)))]
+        .filter((value) => Number.isSafeInteger(value) && value > 0);
+    if (normalizedNodeIds.length === 0) {
+        throw new Error("EDMC music categories have not been loaded yet");
+    }
+
+    await page.goto(`${EDMC_ORIGIN}/search/?type=forums_topic`, { waitUntil: "domcontentloaded" });
+    return page.evaluate(async ({ searchQuery, musicNodeIds }) => {
+        const input = document.querySelector("#elMainSearchInput");
+        const form = input?.closest("form");
+        const nodeInput = form?.querySelector('input[name="forums_topic_node"]');
+        const titleRadio = form?.querySelector('input[name="search_in"][value="titles"]');
+        if (!input || !form || !nodeInput || !titleRadio) {
+            throw new Error("EDMC search form was not found");
+        }
+        input.value = searchQuery;
+        nodeInput.value = musicNodeIds.join(",");
+        titleRadio.checked = true;
+
+        const response = await fetch(form.action, {
+            method: "POST",
+            body: new FormData(form),
+            credentials: "include",
+        });
+        if (!response.ok) {
+            throw new Error(`EDMC search returned HTTP ${response.status}`);
+        }
+        const resultDocument = new DOMParser().parseFromString(
+            await response.text(), "text/html");
+        const tracks = [...resultDocument.querySelectorAll(
+            '.ipsStreamItem_title a[href*="/music/"]')]
+            .map((link) => {
+                const url = new URL(link.getAttribute("href"), response.url);
+                url.search = "";
+                url.hash = "";
+                const match = url.pathname.match(/-(\d+)\/$/);
+                return {
+                    title: (link.textContent || "").replace(/\s+/g, " ").trim(),
+                    url: url.href,
+                    topicId: match ? Number(match[1]) : null,
+                };
+            })
+            .filter((track) => track.title && track.topicId &&
+                /^https:\/\/edmc\.to\/music\//.test(track.url));
+        return {
+            query: searchQuery,
+            url: response.url,
+            tracks: [...new Map(tracks.map((track) => [track.topicId, track])).values()],
+        };
+    }, { searchQuery: normalizedQuery, musicNodeIds: normalizedNodeIds });
+}
+
 export async function readRelease(page, releaseUrl) {
     assertEdmcReleaseUrl(releaseUrl);
     await page.goto(releaseUrl, { waitUntil: "domcontentloaded" });
@@ -123,6 +177,14 @@ export function assertEdmcReleaseUrl(value) {
     if (url.protocol !== "https:" || url.hostname !== "edmc.to" || !/^\/music\/[^/]+-\d+\/$/.test(url.pathname)) {
         throw new Error(`Invalid EDMC release URL: ${value}`);
     }
+}
+
+export function assertEdmcSearchQuery(value) {
+    const query = String(value || "").replace(/\s+/g, " ").trim();
+    if (query.length < 2 || query.length > 120) {
+        throw new Error("EDMC search must be between 2 and 120 characters");
+    }
+    return query;
 }
 
 export { EDMC_ORIGIN };

@@ -48,6 +48,7 @@ class EdmcFeature final : public LibraryFeature {
     void refreshAll();
     void pushSettings();
     void openSetup();
+    void searchMusic(const QString& query);
 
   private:
     enum class HttpMethod {
@@ -74,6 +75,7 @@ class EdmcFeature final : public LibraryFeature {
         Categories,
         Genres,
         Releases,
+        SearchResults,
         Formats,
     };
 
@@ -98,6 +100,7 @@ class EdmcFeature final : public LibraryFeature {
     QString m_trackedJobId;
     QString m_trackedAction;
     Screen m_screen{Screen::Categories};
+    Screen m_formatsParentScreen{Screen::Releases};
     int m_selectedCategory{-1};
     qint64 m_selectedTopicId{0};
     int m_pendingRequests{0};

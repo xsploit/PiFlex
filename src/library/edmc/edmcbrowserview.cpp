@@ -4,6 +4,7 @@
 #include <QHBoxLayout>
 #include <QKeyEvent>
 #include <QLabel>
+#include <QLineEdit>
 #include <QListWidget>
 #include <QPushButton>
 #include <QSizePolicy>
@@ -32,6 +33,15 @@ EdmcBrowserView::EdmcBrowserView(QWidget* parent)
         QLabel#EdmcTitle { font-size: 30px; font-weight: 800; }
         QLabel#EdmcStatus { font-size: 18px; color: #aeb0bd; }
         QLabel#EdmcMessage { font-size: 18px; color: #ded8ff; padding: 5px 0; }
+        QLineEdit {
+            min-height: 52px;
+            background: #202028;
+            color: #f3f3f7;
+            border: 2px solid #4a4a58;
+            border-radius: 7px;
+            font-size: 22px;
+            padding: 4px 12px;
+        }
         QListWidget {
             background: #191920;
             color: #f3f3f7;
@@ -82,6 +92,17 @@ EdmcBrowserView::EdmcBrowserView(QWidget* parent)
     pLayout->addWidget(m_pStatus);
     pLayout->addWidget(m_pMessage);
 
+    auto* pSearchRow = new QHBoxLayout();
+    pSearchRow->setSpacing(8);
+    m_pSearch = new QLineEdit(this);
+    m_pSearch->setPlaceholderText(tr("Search EDMC Music titles"));
+    m_pSearch->setClearButtonEnabled(true);
+    auto* pSearchButton = actionButton(tr("SEARCH"), this);
+    pSearchButton->setMinimumWidth(150);
+    pSearchRow->addWidget(m_pSearch, 1);
+    pSearchRow->addWidget(pSearchButton);
+    pLayout->addLayout(pSearchRow);
+
     m_pRows = new QListWidget(this);
     m_pRows->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
     m_pRows->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -117,6 +138,12 @@ EdmcBrowserView::EdmcBrowserView(QWidget* parent)
     connect(m_pPreview, &QPushButton::clicked, this, &EdmcBrowserView::previewRequested);
     connect(m_pLoad1, &QPushButton::clicked, this, &EdmcBrowserView::loadDeck1Requested);
     connect(m_pLoad2, &QPushButton::clicked, this, &EdmcBrowserView::loadDeck2Requested);
+    connect(pSearchButton, &QPushButton::clicked, this, [this] {
+        emit searchRequested(m_pSearch->text());
+    });
+    connect(m_pSearch, &QLineEdit::returnPressed, this, [this] {
+        emit searchRequested(m_pSearch->text());
+    });
 }
 
 void EdmcBrowserView::onShow() {

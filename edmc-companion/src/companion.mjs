@@ -9,7 +9,7 @@ import { normalizeSettings } from "./settings.mjs";
 import { StateStore } from "./state-store.mjs";
 import { UsbLibrary } from "./usb-library.mjs";
 import { assertProviderId, readPreview, resolveOfficialDownload } from "./providers/beatexs.mjs";
-import { assertEdmcGenreUrl, readGenreListing, readGenrePage, readMusicCatalog, readRelease } from "./providers/edmc.mjs";
+import { assertEdmcGenreUrl, readGenreListing, readGenrePage, readMusicCatalog, readMusicSearch, readRelease } from "./providers/edmc.mjs";
 
 const AUTH_PROBE_URL = "https://edmc.to/genre/jump-up-145/";
 
@@ -320,6 +320,55 @@ export class Companion {
                     };
                 });
                 update(1, `Loaded page ${listing.page} of ${listing.lastPage}`);
+                return this.browse();
+            } finally {
+                await browserPage.close().catch(() => undefined);
+                await this.closeHeadlessBrowser();
+            }
+        });
+    }
+
+    enqueueSearch({ query }) {
+        return this.jobs.enqueue("search", { query }, async ({ update }) => {
+            update(0.1, `Searching EDMC Music for ${query}`);
+            const musicNodeIds = this.catalog()
+                .flatMap((category) => category.genres || [])
+                .map((genre) => String(genre.url || "").match(/-(\d+)\/$/)?.[1])
+                .filter(Boolean);
+            const browserPage = await this.browser.page();
+            try {
+                const listing = await readMusicSearch(browserPage, query, musicNodeIds);
+                await this.stateStore.update((state) => {
+                    const existingByTopic = new Map(
+                        state.releases.map((release) => [release.topicId, release]));
+                    for (const track of listing.tracks) {
+                        const existing = existingByTopic.get(track.topicId);
+                        existingByTopic.set(track.topicId, {
+                            ...existing,
+                            topicId: track.topicId,
+                            title: track.title,
+                            url: track.url,
+                            genreName: "EDMC Music search",
+                            providers: existing?.providers || [],
+                            discoveredAt: existing?.discoveredAt || new Date().toISOString(),
+                        });
+                    }
+                    state.releases = [...existingByTopic.values()]
+                        .sort((left, right) => right.topicId - left.topicId)
+                        .slice(0, 2000);
+                    state.browse = {
+                        mode: "search",
+                        query: listing.query,
+                        searchUrl: listing.url,
+                        topicIds: listing.tracks.map((track) => track.topicId),
+                    };
+                    state.auth = {
+                        state: "signed-in",
+                        checkedAt: new Date().toISOString(),
+                        message: "Saved EDMC session is working",
+                    };
+                });
+                update(1, `Found ${listing.tracks.length} release(s)`);
                 return this.browse();
             } finally {
                 await browserPage.close().catch(() => undefined);

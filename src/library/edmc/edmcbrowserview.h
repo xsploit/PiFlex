@@ -8,6 +8,7 @@
 
 class QLabel;
 class QListWidget;
+class QLineEdit;
 class QPushButton;
 
 // A controller-first EDMC browser. The focused QListWidget deliberately uses
@@ -47,6 +48,7 @@ class EdmcBrowserView final : public QWidget, public LibraryView {
     void previewRequested();
     void loadDeck1Requested();
     void loadDeck2Requested();
+    void searchRequested(const QString& query);
 
   private slots:
     void updateActions();
@@ -58,6 +60,7 @@ class EdmcBrowserView final : public QWidget, public LibraryView {
     QLabel* m_pTitle{nullptr};
     QLabel* m_pStatus{nullptr};
     QLabel* m_pMessage{nullptr};
+    QLineEdit* m_pSearch{nullptr};
     QListWidget* m_pRows{nullptr};
     QPushButton* m_pBack{nullptr};
     QPushButton* m_pOpen{nullptr};
