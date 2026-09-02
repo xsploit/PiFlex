@@ -15,8 +15,8 @@
 namespace {
 const QString kGroup = QStringLiteral("[BiteDJ]");
 const QString kItem = QStringLiteral("high_contrast");
-const QString kThemeItem = QStringLiteral("main_view_style");
-const QString kLegacyThemeItem = QStringLiteral("visual_theme");
+const QString kThemeItem = QStringLiteral("visual_theme");
+const QString kLegacyThemeItem = QStringLiteral("main_view_style");
 constexpr double kDefault = 0.0;
 constexpr int kDefaultTheme = 0;
 
@@ -263,9 +263,9 @@ HighContrast::HighContrast(UserSettingsPointer pConfig)
             &HighContrast::onEnabledChanged);
 
     const ConfigKey themeKey(kGroup, kThemeItem);
-    // Older PiFlex builds exposed this as visual_theme. Use that value as the
-    // migration fallback so an existing choice survives the renamed, more
-    // accurate Main View setting.
+    // Older PiFlex builds used main_view_style for both geometry and colour.
+    // Preserve that colour choice once, while allowing the two controls to be
+    // changed independently from now on.
     const int legacyTheme = m_pConfig->getValue(
             ConfigKey(kGroup, kLegacyThemeItem), kDefaultTheme);
     m_theme = std::clamp(m_pConfig->getValue(themeKey, legacyTheme), 0, 2);

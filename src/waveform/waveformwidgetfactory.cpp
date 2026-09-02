@@ -582,6 +582,10 @@ void WaveformWidgetFactory::slotResetDisplayDefaults(double value) {
             0.0);
     ControlObject::set(
             ConfigKey(QStringLiteral("[BiteDJ]"),
+                    QStringLiteral("visual_theme")),
+            0.0);
+    ControlObject::set(
+            ConfigKey(QStringLiteral("[BiteDJ]"),
                     QStringLiteral("high_contrast")),
             0.0);
 }
