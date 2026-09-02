@@ -12,7 +12,7 @@
         collapse so the list packs from the top.
 
   KEY — one stacked block per deck (deck 1 top, deck 2 bottom) with the
-        current key, +/-2 semitone nudges, and a reset (see
+        current key, +/-2 semitone nudges, harmonic Match, and a reset (see
         templates/keyfx_deck_row.xml).
 
   WAVE — linked scrolling-waveform zoom. The buttons target deck 1 because

@@ -1,6 +1,7 @@
 <!--
   One deck's block on the KEY page of the Overview panel (effects.xml):
-  the deck's current key plus +/-2 semitone nudges and a reset.
+  the deck's current key plus +/-2 semitone nudges, one-touch harmonic
+  matching, and a reset.
 
   The key badge binds [Channel<N>],visual_key for the text and the
   fork-added [Channel<N>],key_shifted for `highlight`, which turns it
@@ -10,7 +11,8 @@
   as the same key doesn't light it up.
 
   Nudges are the fork-added pitch_up_2/pitch_down_2 push buttons on
-  KeyControl; reset is stock reset_key (pitch back to 0).
+  KeyControl. Match uses stock Mixxx sync_key, which selects a compatible key
+  against the playing sync target, and reset_key returns to the file key.
 
   Variables:
     channel: channel number (e.g. 1, 2)
@@ -58,7 +60,7 @@
 
           <PushButton>
             <ObjectName>KeyFX_Down</ObjectName>
-            <Size>56f,54f</Size>
+            <Size>46f,54f</Size>
             <NumberStates>1</NumberStates>
             <State>
               <Number>0</Number>
@@ -73,7 +75,7 @@
 
           <PushButton>
             <ObjectName>KeyFX_Up</ObjectName>
-            <Size>56f,54f</Size>
+            <Size>46f,54f</Size>
             <NumberStates>1</NumberStates>
             <State>
               <Number>0</Number>
@@ -87,8 +89,23 @@
           </PushButton>
 
           <PushButton>
-            <ObjectName>KeyFX_Reset</ObjectName>
+            <ObjectName>KeyFX_Match</ObjectName>
             <Size>0me,54f</Size>
+            <NumberStates>1</NumberStates>
+            <State>
+              <Number>0</Number>
+              <Text>Match</Text>
+            </State>
+            <Connection>
+              <ConfigKey>[Channel<Variable name="channel"/>],sync_key</ConfigKey>
+              <ConnectValueToWidget>false</ConnectValueToWidget>
+              <EmitOnDownPress>true</EmitOnDownPress>
+            </Connection>
+          </PushButton>
+
+          <PushButton>
+            <ObjectName>KeyFX_Reset</ObjectName>
+            <Size>54f,54f</Size>
             <NumberStates>1</NumberStates>
             <State>
               <Number>0</Number>

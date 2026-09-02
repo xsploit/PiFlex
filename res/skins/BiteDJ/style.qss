@@ -467,7 +467,7 @@ WPushButton[value="1"]:hover {
   padding: 0 1px;
 }
 
-/* KEY page: one stacked block per deck, +/-2 semitone nudges and reset. */
+/* KEY page: one stacked block per deck, +/-2 nudges, Match, and reset. */
 #KeyFX_DeckBlock {
   padding: 0 0 10px 0;
 }
@@ -508,6 +508,7 @@ WPushButton[value="1"]:hover {
 
 #KeyFX_Down,
 #KeyFX_Up,
+#KeyFX_Match,
 #KeyFX_Reset {
   background-color: #1a1a1a;
   border: 1px solid #3a3a3a;
@@ -517,6 +518,7 @@ WPushButton[value="1"]:hover {
   font-weight: bold;
 }
 
+#KeyFX_Match,
 #KeyFX_Reset {
   font-size: 15px;
   text-transform: uppercase;
@@ -524,6 +526,7 @@ WPushButton[value="1"]:hover {
 
 #KeyFX_Down:pressed,
 #KeyFX_Up:pressed,
+#KeyFX_Match:pressed,
 #KeyFX_Reset:pressed {
   border-color: #c9372c;
   color: #c9372c;
