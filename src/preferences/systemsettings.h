@@ -129,6 +129,7 @@ class SystemSettings : public QObject {
     void onVinylModeChanged(double value);
     void onVinylBrakeChanged(double value);
     void onHotcueActivatePlaysChanged(double value);
+    void onLoadWhenDeckPlayingChanged(double value);
     void onScreenRotationChanged(double value);
     // RecordingManager::isRecording — the engine's own view of whether the
     // sidechain recorder is running, which is what confirms a start took (the
@@ -232,6 +233,10 @@ class SystemSettings : public QObject {
     // from the cue), 0 = gated (previews only while held, then seeks back and
     // stops). CO and config share the key; CueControl reads the config value.
     std::unique_ptr<ControlObject> m_pCoHotcueActivatePlays;
+    // [Controls],LoadWhenDeckPlaying — 0 rejects a load into a playing deck,
+    // 1 loads while continuing playback, and 2 stops the deck before loading.
+    // Existing Mixxx load paths read this config key directly.
+    std::unique_ptr<ControlObject> m_pCoLoadWhenDeckPlaying;
     // [BiteDJ],screen_rotation — display rotation in degrees (0 or 180).
     std::unique_ptr<ControlObject> m_pCoScreenRotation;
     // Emitted from the controller thread; the queued connection hops the eject

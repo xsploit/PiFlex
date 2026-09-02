@@ -56,6 +56,16 @@ const QString kControlsGroup = QStringLiteral("[Controls]");
 const QString kHotcueActivatePlaysKey = QStringLiteral("HotcueActivatePlays");
 constexpr double kHotcueActivatePlaysDefault = 1.0;
 
+// What happens when a track is loaded into a deck that is already playing.
+// These values intentionally match DlgPrefDeck::LoadWhenDeckPlaying:
+// 0 = reject the load, 1 = load and keep playing, 2 = stop then load.
+const QString kLoadWhenDeckPlayingKey = QStringLiteral("LoadWhenDeckPlaying");
+const QString kLegacyAllowTrackLoadToPlayingDeckKey =
+        QStringLiteral("AllowTrackLoadToPlayingDeck");
+constexpr double kLoadWhenDeckPlayingReject = 0.0;
+constexpr double kLoadWhenDeckPlayingAllow = 1.0;
+constexpr double kLoadWhenDeckPlayingAllowButStop = 2.0;
+
 // Mixxx track-time display mode stored in mixxx.cfg:
 // 0 = elapsed, 1 = remaining, 2 = elapsed and remaining.
 const QString kPositionDisplayKey = QStringLiteral("PositionDisplay");
@@ -190,6 +200,31 @@ SystemSettings::SystemSettings(UserSettingsPointer pConfig,
             &ControlObject::valueChanged,
             this,
             &SystemSettings::onHotcueActivatePlaysChanged);
+
+    // Deck load protection (General settings tab). The library, drag-and-drop,
+    // controller load actions, and PlayerManager all read this config key, so
+    // one touchscreen setting keeps every load path consistent. Preserve the
+    // old boolean preference when upgrading a config that predates the enum.
+    const ConfigKey loadWhenDeckPlayingKey(kControlsGroup, kLoadWhenDeckPlayingKey);
+    const ConfigKey legacyAllowTrackLoadKey(
+            kControlsGroup, kLegacyAllowTrackLoadToPlayingDeckKey);
+    const double legacyDefault = m_pConfig->getValue(legacyAllowTrackLoadKey, false)
+            ? kLoadWhenDeckPlayingAllow
+            : kLoadWhenDeckPlayingReject;
+    double loadWhenDeckPlaying =
+            m_pConfig->getValue(loadWhenDeckPlayingKey, legacyDefault);
+    if (loadWhenDeckPlaying != kLoadWhenDeckPlayingReject &&
+            loadWhenDeckPlaying != kLoadWhenDeckPlayingAllow &&
+            loadWhenDeckPlaying != kLoadWhenDeckPlayingAllowButStop) {
+        loadWhenDeckPlaying = kLoadWhenDeckPlayingReject;
+    }
+    m_pCoLoadWhenDeckPlaying =
+            std::make_unique<ControlObject>(loadWhenDeckPlayingKey);
+    m_pCoLoadWhenDeckPlaying->set(loadWhenDeckPlaying);
+    connect(m_pCoLoadWhenDeckPlaying.get(),
+            &ControlObject::valueChanged,
+            this,
+            &SystemSettings::onLoadWhenDeckPlayingChanged);
 
     // Screen rotation in degrees, 0 or 180 (System settings tab).
     const ConfigKey screenRotationKey(kBiteDj, QStringLiteral("screen_rotation"));
@@ -870,6 +905,19 @@ void SystemSettings::onHotcueActivatePlaysChanged(double value) {
     // the next hotcue press and survives the next launch.
     m_pConfig->setValue(ConfigKey(kControlsGroup, kHotcueActivatePlaysKey),
             value != 0.0 ? 1 : 0);
+}
+
+void SystemSettings::onLoadWhenDeckPlayingChanged(double value) {
+    // Segment buttons emit exact enum values. Reject any unexpected value so
+    // a malformed skin or config cannot silently disable deck protection.
+    if (value != kLoadWhenDeckPlayingReject &&
+            value != kLoadWhenDeckPlayingAllow &&
+            value != kLoadWhenDeckPlayingAllowButStop) {
+        value = kLoadWhenDeckPlayingReject;
+        m_pCoLoadWhenDeckPlaying->set(value);
+    }
+    m_pConfig->setValue(
+            ConfigKey(kControlsGroup, kLoadWhenDeckPlayingKey), value);
 }
 
 void SystemSettings::onScreenRotationChanged(double value) {

@@ -304,6 +304,49 @@
                     </Connection>
                   </WidgetGroup>
 
+                  <!-- Existing Mixxx deck-load protection, exposed here for
+                       touchscreen use. Lock rejects a load into a playing
+                       deck, Stop stops it before loading, and Live replaces
+                       the track while playback continues. Lock is the safe
+                       default for a standalone controller. -->
+                  <WidgetGroup>
+                    <ObjectName>SettingsRow</ObjectName>
+                    <Layout>horizontal</Layout>
+                    <Size>0me,52f</Size>
+                    <Children>
+                      <Label>
+                        <ObjectName>SettingsRowLabel</ObjectName>
+                        <Text>Deck Lock</Text>
+                        <Size>0me,0me</Size>
+                      </Label>
+                      <WidgetGroup>
+                        <ObjectName>SettingsSegmented</ObjectName>
+                        <Layout>horizontal</Layout>
+                        <Size>150f,40f</Size>
+                        <Children>
+                          <Template src="skin:templates/setting_segment_button.xml">
+                            <SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable>
+                            <SetVariable name="Text">Lock</SetVariable>
+                            <SetVariable name="ConfigKey">[Controls],LoadWhenDeckPlaying</SetVariable>
+                            <SetVariable name="Value">0</SetVariable>
+                          </Template>
+                          <Template src="skin:templates/setting_segment_button.xml">
+                            <SetVariable name="ObjectName">SettingsSegmentMid</SetVariable>
+                            <SetVariable name="Text">Stop</SetVariable>
+                            <SetVariable name="ConfigKey">[Controls],LoadWhenDeckPlaying</SetVariable>
+                            <SetVariable name="Value">2</SetVariable>
+                          </Template>
+                          <Template src="skin:templates/setting_segment_button.xml">
+                            <SetVariable name="ObjectName">SettingsSegmentRight</SetVariable>
+                            <SetVariable name="Text">Live</SetVariable>
+                            <SetVariable name="ConfigKey">[Controls],LoadWhenDeckPlaying</SetVariable>
+                            <SetVariable name="Value">1</SetVariable>
+                          </Template>
+                        </Children>
+                      </WidgetGroup>
+                    </Children>
+                  </WidgetGroup>
+
                   <!-- All three destructive actions share one row: the column
                        is at its five-row height budget at the 420px floor, and
                        they read as one group anyway — each throws away
