@@ -840,6 +840,8 @@ void Library::setFont(const QFont& font) {
     double newFontHeight = newMetrics.height();
 
     m_trackTableFont = font;
+    m_pConfig->setValue(
+            ConfigKey(kConfigGroup, "Font"), m_trackTableFont.toString());
     emit setTrackTableFont(font);
 
     // adapt the previous font height/row height ratio
@@ -850,6 +852,8 @@ void Library::setFont(const QFont& font) {
 
 void Library::setRowHeight(int rowHeight) {
     m_iTrackTableRowHeight = rowHeight;
+    m_pConfig->setValue(
+            ConfigKey(kConfigGroup, "RowHeight"), m_iTrackTableRowHeight);
     emit setTrackTableRowHeight(rowHeight);
 }
 
