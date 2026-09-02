@@ -17,6 +17,7 @@ class DlgHidden;
 class DlgMissing;
 class BaseTrackCache;
 class LibraryTableModel;
+class RekordboxPlaylistModel;
 class TrackCollection;
 class QModelIndex;
 
@@ -62,12 +63,15 @@ class MixxxLibraryFeature final : public LibraryFeature {
 #endif
 
   private:
+    bool ensureAllTracksModel();
     const QString kMissingTitle;
     const QString kHiddenTitle;
     TrackCollection* const m_pTrackCollection;
 
     QSharedPointer<BaseTrackCache> m_pBaseTrackCache;
     LibraryTableModel* m_pLibraryTableModel;
+    QSharedPointer<BaseTrackCache> m_pAllTracksCache;
+    RekordboxPlaylistModel* m_pAllTracksModel = nullptr;
 
     parented_ptr<TreeItemModel> m_pSidebarModel;
 

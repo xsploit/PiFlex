@@ -1,6 +1,7 @@
 #include "library/mixxxlibraryfeature.h"
 
 #include <QtDebug>
+#include <QSqlQuery>
 #ifdef __ENGINEPRIME__
 #include <QMenu>
 #endif
@@ -13,6 +14,7 @@
 #include "library/missing_hidden/dlgmissing.h"
 #include "library/parser.h"
 #include "library/queryutil.h"
+#include "library/rekordbox/rekordboxfeature.h"
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "library/treeitem.h"
@@ -173,11 +175,102 @@ void MixxxLibraryFeature::refreshLibraryModels() {
     }
 }
 
-void MixxxLibraryFeature::searchAndActivate(const QString& query) {
-    VERIFY_OR_DEBUG_ASSERT(m_pLibraryTableModel) {
-        return;
+bool MixxxLibraryFeature::ensureAllTracksModel() {
+    static const QString kLibraryView = QStringLiteral("bitedj_all_tracks_library");
+    static const QString kPlaylistsView = QStringLiteral("bitedj_all_tracks_playlists");
+    static const QString kPlaylistTracksView =
+            QStringLiteral("bitedj_all_tracks_playlist_tracks");
+
+    QSqlDatabase database = m_pTrackCollection->database();
+    QSqlQuery query(database);
+    const QStringList statements = {
+            QStringLiteral(
+                    "CREATE TEMPORARY VIEW IF NOT EXISTS %1 AS "
+                    "SELECT 1000000000 + id AS id, artist, title, album, year, "
+                    "genre, tracknumber, location, comment, rating, duration, "
+                    "bitrate, bpm, key, color, analyze_path FROM rekordbox_library "
+                    "UNION ALL "
+                    "SELECT library.id AS id, library.artist, library.title, "
+                    "library.album, library.year, library.genre, "
+                    "library.tracknumber, track_locations.location, "
+                    "library.comment, library.rating, library.duration, "
+                    "library.bitrate, library.bpm, library.key, library.color, "
+                    "'' AS analyze_path FROM library "
+                    "INNER JOIN track_locations ON library.location = track_locations.id "
+                    "WHERE library.mixxx_deleted = 0 AND track_locations.fs_deleted = 0 "
+                    "AND NOT EXISTS (SELECT 1 FROM rekordbox_library rb "
+                    "WHERE rb.location = track_locations.location)")
+                    .arg(kLibraryView),
+            QStringLiteral(
+                    "CREATE TEMPORARY VIEW IF NOT EXISTS %1 AS "
+                    "SELECT 1 AS id, 'All Tracks' AS name")
+                    .arg(kPlaylistsView),
+            QStringLiteral(
+                    "CREATE TEMPORARY VIEW IF NOT EXISTS %1 AS "
+                    "SELECT 1 AS playlist_id, id AS track_id, id AS position FROM %2")
+                    .arg(kPlaylistTracksView, kLibraryView)};
+    for (const QString& statement : statements) {
+        if (!query.exec(statement)) {
+            LOG_FAILED_QUERY(query) << "Unable to create the PiFlex All Tracks view";
+            return false;
+        }
     }
-    m_pLibraryTableModel->search(query);
+
+    if (!m_pAllTracksCache) {
+        const QStringList columns = {
+                LIBRARYTABLE_ID,
+                LIBRARYTABLE_ARTIST,
+                LIBRARYTABLE_TITLE,
+                LIBRARYTABLE_ALBUM,
+                LIBRARYTABLE_YEAR,
+                LIBRARYTABLE_GENRE,
+                LIBRARYTABLE_TRACKNUMBER,
+                TRACKLOCATIONSTABLE_LOCATION,
+                LIBRARYTABLE_COMMENT,
+                LIBRARYTABLE_RATING,
+                LIBRARYTABLE_DURATION,
+                LIBRARYTABLE_BITRATE,
+                LIBRARYTABLE_BPM,
+                LIBRARYTABLE_KEY,
+                LIBRARYTABLE_COLOR,
+                REKORDBOX_ANALYZE_PATH};
+        const QStringList searchColumns = {
+                LIBRARYTABLE_ARTIST,
+                LIBRARYTABLE_TITLE,
+                LIBRARYTABLE_ALBUM,
+                LIBRARYTABLE_GENRE,
+                LIBRARYTABLE_TRACKNUMBER,
+                TRACKLOCATIONSTABLE_LOCATION,
+                LIBRARYTABLE_COMMENT};
+        m_pAllTracksCache = QSharedPointer<BaseTrackCache>::create(
+                m_pTrackCollection,
+                kLibraryView,
+                LIBRARYTABLE_ID,
+                columns,
+                searchColumns,
+                false);
+        m_pAllTracksModel = new RekordboxPlaylistModel(this,
+                m_pLibrary->trackCollectionManager(),
+                "mixxx.db.model.bitedj.alltracks",
+                kPlaylistsView,
+                kPlaylistTracksView,
+                m_pAllTracksCache);
+        m_pAllTracksModel->setPlaylistById(1);
+    }
+    m_pAllTracksCache->buildIndex();
+    m_pAllTracksModel->select();
+    return true;
+}
+
+void MixxxLibraryFeature::searchAndActivate(const QString& query) {
+    if (ensureAllTracksModel()) {
+        m_pAllTracksModel->search(query);
+    } else {
+        VERIFY_OR_DEBUG_ASSERT(m_pLibraryTableModel) {
+            return;
+        }
+        m_pLibraryTableModel->search(query);
+    }
     activate();
 }
 
@@ -189,9 +282,12 @@ void MixxxLibraryFeature::bindSidebarWidget(WLibrarySidebar* pSidebarWidget) {
 #endif
 
 void MixxxLibraryFeature::activate() {
-    //qDebug() << "MixxxLibraryFeature::activate()";
     emit saveModelState();
-    emit showTrackModel(m_pLibraryTableModel);
+    if (ensureAllTracksModel()) {
+        emit showTrackModel(m_pAllTracksModel);
+    } else {
+        emit showTrackModel(m_pLibraryTableModel);
+    }
     emit enableCoverArtDisplay(true);
 }
 

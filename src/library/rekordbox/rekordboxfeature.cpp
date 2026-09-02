@@ -1318,12 +1318,26 @@ void readAnalyze(TrackPointer track,
 RekordboxPlaylistModel::RekordboxPlaylistModel(QObject* parent,
         TrackCollectionManager* trackCollectionManager,
         QSharedPointer<BaseTrackCache> trackSource)
-        : BaseExternalPlaylistModel(parent,
+        : RekordboxPlaylistModel(parent,
                   trackCollectionManager,
                   "mixxx.db.model.rekordbox.playlistmodel",
                   kRekordboxPlaylistsTable,
                   kRekordboxPlaylistTracksTable,
-                  trackSource) {
+                  std::move(trackSource)) {
+}
+
+RekordboxPlaylistModel::RekordboxPlaylistModel(QObject* parent,
+        TrackCollectionManager* trackCollectionManager,
+        const char* settingsNamespace,
+        const QString& playlistsTable,
+        const QString& playlistTracksTable,
+        QSharedPointer<BaseTrackCache> trackSource)
+        : BaseExternalPlaylistModel(parent,
+                  trackCollectionManager,
+                  settingsNamespace,
+                  playlistsTable,
+                  playlistTracksTable,
+                  std::move(trackSource)) {
 }
 
 void RekordboxPlaylistModel::initSortColumnMapping() {
@@ -1434,6 +1448,16 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
         return track;
     }
 
+    const QString anlzPath =
+            getFieldVariant(index, ColumnCache::COLUMN_REKORDBOX_ANALYZE_PATH)
+                    .toString();
+    // The PiFlex aggregate also uses this model for ordinary library rows.
+    // Those rows have no Rekordbox ANLZ file and are already fully represented
+    // by the internal Track object returned above.
+    if (anlzPath.isEmpty()) {
+        return track;
+    }
+
     // getTrack() hands back the very same Track a deck may already be playing,
     // and readAnalyze() below rewrites its cues from the ANLZ file. Store any
     // cue the DJ has set since the track was loaded before that happens, or
@@ -1491,9 +1515,6 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
 
     mixxx::audio::SampleRate sampleRate = track->getSampleRate();
 
-    QString anlzPath =
-            getFieldVariant(index, ColumnCache::COLUMN_REKORDBOX_ANALYZE_PATH)
-                    .toString();
     QString anlzPathExt = anlzPath.left(anlzPath.length() - 3) + "EXT";
 
     if (QFile(anlzPathExt).exists()) {
@@ -1545,7 +1566,10 @@ bool RekordboxPlaylistModel::isColumnInternal(int column) {
 
 Qt::ItemFlags RekordboxPlaylistModel::flags(const QModelIndex& index) const {
     Qt::ItemFlags itemFlags = readOnlyFlags(index);
-    if (index.column() == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING)) {
+    if (index.column() == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) &&
+            !getFieldVariant(index, ColumnCache::COLUMN_REKORDBOX_ANALYZE_PATH)
+                     .toString()
+                     .isEmpty()) {
         itemFlags |= Qt::ItemIsEditable;
     }
     return itemFlags;
@@ -1554,7 +1578,10 @@ Qt::ItemFlags RekordboxPlaylistModel::flags(const QModelIndex& index) const {
 bool RekordboxPlaylistModel::setData(
         const QModelIndex& index, const QVariant& value, int role) {
     if (role == Qt::EditRole && index.isValid() &&
-            index.column() == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING)) {
+            index.column() == fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_RATING) &&
+            !getFieldVariant(index, ColumnCache::COLUMN_REKORDBOX_ANALYZE_PATH)
+                     .toString()
+                     .isEmpty()) {
         return setRatingOverride(index, value);
     }
     return BaseExternalPlaylistModel::setData(index, value, role);
