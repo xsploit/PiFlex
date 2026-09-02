@@ -74,7 +74,11 @@
                   <LibrarySidebar>
                     <ObjectName>LibrarySidebar</ObjectName>
                     <Size>0me,0me</Size>
-                    <HiddenFeatures>Tracks,Auto DJ,Playlists,Crates</HiddenFeatures>
+                    <!-- Keep desktop-oriented management sources hidden, but
+                         expose the internal collection as All Tracks. Each
+                         Rekordbox device also provides its own complete All
+                         Tracks child for files not yet learned by BiteDJ. -->
+                    <HiddenFeatures>Auto DJ,Playlists,Crates</HiddenFeatures>
                   </LibrarySidebar>
                 </Children>
                 <Connection>

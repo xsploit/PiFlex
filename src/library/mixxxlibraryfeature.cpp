@@ -149,7 +149,12 @@ void MixxxLibraryFeature::bindLibraryWidget(WLibrary* pLibraryWidget,
 }
 
 QVariant MixxxLibraryFeature::title() {
-    return tr("Tracks");
+    // BiteDJ previously hid this feature, leaving tracks learned from normal
+    // USB browsing and EDMC downloads without an obvious common destination.
+    // "All Tracks" is the controller-style name for Mixxx's internal
+    // collection. Rekordbox devices retain their own complete All Tracks child
+    // for files that have not yet been opened by BiteDJ.
+    return tr("All Tracks");
 }
 
 TreeItemModel* MixxxLibraryFeature::sidebarModel() const {
