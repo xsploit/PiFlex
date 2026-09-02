@@ -217,11 +217,16 @@ void WLibrarySidebar::toggleSelectedItem() {
 // Mirrors the leaf-tap branch of mousePressEvent for callers that don't have
 // a click position (e.g. controller wheel-press routed through LibraryControl).
 // Emits leafItemActivated so the LibraryBreadcrumb updates, and collapses the
-// sidebar via [Sidebar],sidebar_visible. Skips non-leaves and AutoDJ-style
-// feature roots that own children — same gate as mousePressEvent.
+// sidebar via [Sidebar],sidebar_visible. Feature roots that own a track table
+// also open their content even when they have utility children.
 void WLibrarySidebar::activateSelectedLeaf() {
     QModelIndex idx = selectedIndex();
-    if (!idx.isValid() || idx.model()->hasChildren(idx)) {
+    if (!idx.isValid()) {
+        return;
+    }
+    const auto* sidebarModel = qobject_cast<const SidebarModel*>(idx.model());
+    const bool ownsTrackTable = sidebarModel && sidebarModel->hasTrackTable(idx);
+    if (idx.model()->hasChildren(idx) && !ownsTrackTable) {
         return;
     }
     emit leafItemActivated(idx.data(Qt::DisplayRole).toString());
@@ -392,8 +397,10 @@ void WLibrarySidebar::mousePressEvent(QMouseEvent* event) {
     if (!idx.isValid()) {
         return;
     }
-    bool leaf = !idx.model()->hasChildren(idx);
-    if (leaf) {
+    const auto* sidebarModel = qobject_cast<const SidebarModel*>(idx.model());
+    const bool opensContent = !idx.model()->hasChildren(idx) ||
+            (sidebarModel && sidebarModel->hasTrackTable(idx));
+    if (opensContent) {
         emit leafItemActivated(idx.data(Qt::DisplayRole).toString());
         ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
                                    QStringLiteral("sidebar_visible")),
