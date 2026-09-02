@@ -154,6 +154,13 @@ SystemSettings::SystemSettings(UserSettingsPointer pConfig,
             this,
             &SystemSettings::onRefreshRequested);
 
+    m_pCoRestartApp = std::make_unique<ControlPushButton>(
+            ConfigKey(kGroup, QStringLiteral("restart_app")));
+    connect(m_pCoRestartApp.get(),
+            &ControlObject::valueChanged,
+            this,
+            &SystemSettings::onRestartAppRequested);
+
     // Drives the shutdown confirm WidgetStack in settings.xml: 0 = "Shut Down"
     // page, 1 = "Confirm / Cancel" page. Pre-created so the skin parser's
     // controlFromConfigKey() reuses it and the WidgetStack has a value to read
@@ -905,6 +912,23 @@ void SystemSettings::onHotcueActivatePlaysChanged(double value) {
     // the next hotcue press and survives the next launch.
     m_pConfig->setValue(ConfigKey(kControlsGroup, kHotcueActivatePlaysKey),
             value != 0.0 ? 1 : 0);
+}
+
+void SystemSettings::onRestartAppRequested(double value) {
+    if (value == 0.0) {
+        return;
+    }
+    m_pConfig->save();
+    if (Notifications* pNotifications = Notifications::tryInstance()) {
+        pNotifications->publishSticky(tr("Restarting BiteDJ..."),
+                Notifications::Severity::Info);
+    }
+    // The PiFlex user service is Restart=on-failure. A deliberate non-zero
+    // exit asks the service manager to relaunch the application without
+    // rebooting the Pi or risking an abrupt power cut.
+    QTimer::singleShot(200, []() {
+        QCoreApplication::exit(1);
+    });
 }
 
 void SystemSettings::onLoadWhenDeckPlayingChanged(double value) {

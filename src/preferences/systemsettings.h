@@ -125,6 +125,7 @@ class SystemSettings : public QObject {
 
   private slots:
     void onRefreshRequested(double value);
+    void onRestartAppRequested(double value);
     void onShutdownRequested(double value);
     void onVinylModeChanged(double value);
     void onVinylBrakeChanged(double value);
@@ -219,6 +220,7 @@ class SystemSettings : public QObject {
 
     std::unique_ptr<ControlObject> m_pCoUsbCount;
     std::unique_ptr<ControlObject> m_pCoUsbRefresh;
+    std::unique_ptr<ControlPushButton> m_pCoRestartApp;
     std::unique_ptr<ControlObject> m_pCoShutdownArm;
     std::unique_ptr<ControlObject> m_pCoShutdown;
     // [BiteDJ],vinyl_mode — 1 = Vinyl, 0 = CDJ jog behaviour. Persisted to

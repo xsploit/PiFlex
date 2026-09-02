@@ -670,6 +670,25 @@
                 <SizePolicy>me,me</SizePolicy>
               </UsbList>
 
+              <WidgetGroup>
+                <ObjectName>SettingsRow</ObjectName>
+                <Layout>horizontal</Layout>
+                <Size>0me,52f</Size>
+                <Children>
+                  <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Application</Text><Size>0me,0me</Size></Label>
+                  <PushButton>
+                    <ObjectName>SettingsActionButton</ObjectName>
+                    <Size>150f,40f</Size>
+                    <NumberStates>1</NumberStates>
+                    <State><Number>0</Number><Text>Restart BiteDJ</Text></State>
+                    <Connection>
+                      <ConfigKey>[System],restart_app</ConfigKey>
+                      <EmitOnDownPress>true</EmitOnDownPress>
+                    </Connection>
+                  </PushButton>
+                </Children>
+              </WidgetGroup>
+
               <!-- One row carries everything on this page that isn't a drive:
                    rotation, day/night and Power. The USB list is the reason —
                    it is the page's only content that grows with the hardware
