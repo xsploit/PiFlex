@@ -10,6 +10,12 @@
            renderers on the Pi. -->
       <WidgetStack currentpage="[BiteDJ],main_view_style">
         <ObjectName>MainViewDeckInfoStack</ObjectName>
+        <!-- A stack defaults to an expanding horizontal policy. Without an
+             explicit width it split each deck row evenly with the waveform,
+             leaving half of the 10-inch display as an empty info rail. Keep
+             the rail at the widest of its three layouts and give the rest of
+             the row to the waveform renderer. -->
+        <Size>126f,0me</Size>
         <Children>
           <WidgetGroup>
             <ObjectName>WaveformInfo</ObjectName>
