@@ -6,6 +6,27 @@ resource=/usr/local/share/mixxx
 logdir="$HOME/.local/state/pflx"
 mkdir -p "$settings" "$logdir"
 
+runtime_dir="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+lockfile="$runtime_dir/pflx-bitedj.lock"
+pidfile="$runtime_dir/pflx-bitedj.pid"
+exec 9>"$lockfile"
+if ! flock -n 9; then
+    echo "PFLX: another BiteDJ supervisor already owns $lockfile"
+    exit 0
+fi
+
+child=""
+cleanup() {
+    if [ -n "$child" ] && kill -0 "$child" 2>/dev/null; then
+        kill -TERM "$child" 2>/dev/null || true
+        wait "$child" 2>/dev/null || true
+    fi
+    rm -f "$pidfile"
+}
+trap cleanup EXIT
+trap 'exit 0' INT TERM HUP
+printf '%s\n' "$$" > "$pidfile"
+
 crashes=0
 while :; do
     stamp=$(date -u +%Y%m%dT%H%M%SZ)
@@ -15,8 +36,19 @@ while :; do
     taskset -c 0,1,2 /usr/local/bin/mixxx \
         --settings-path "$settings" \
         --resource-path "$resource" \
-        --log-level warning >>"$logfile" 2>&1
+        --log-level warning >>"$logfile" 2>&1 &
+    child=$!
+    wait "$child"
     status=$?
+    child=""
+
+    if [ "$status" -eq 42 ]; then
+        echo "PFLX: BiteDJ requested an application restart" | tee -a "$logfile"
+        crashes=0
+        sleep 1
+        continue
+    fi
+
     crashes=$((crashes + 1))
     echo "PFLX: BiteDJ exited with status $status" | tee -a "$logfile"
 

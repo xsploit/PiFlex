@@ -923,11 +923,10 @@ void SystemSettings::onRestartAppRequested(double value) {
         pNotifications->publishSticky(tr("Restarting BiteDJ..."),
                 Notifications::Severity::Info);
     }
-    // The PiFlex user service is Restart=on-failure. A deliberate non-zero
-    // exit asks the service manager to relaunch the application without
-    // rebooting the Pi or risking an abrupt power cut.
+    // Exit 42 is the supervisor's explicit requested-restart code. It relaunches
+    // BiteDJ without consuming one of the three crash-recovery attempts.
     QTimer::singleShot(200, []() {
-        QCoreApplication::exit(1);
+        QCoreApplication::exit(42);
     });
 }
 
