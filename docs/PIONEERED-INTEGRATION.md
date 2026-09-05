@@ -23,6 +23,8 @@ reducing the space available to two decks.
   Left-click/tap toggles elapsed/remaining; both responsive readout sizes share
   the same deck control. Invalid/missing custom controls retain the legacy
   global setting. Skins without this option are unchanged.
+  This toggle belongs to the Play-view numeric readout, not the compact overview
+  countdown overlay used while browsing/settings; that overlay stays remaining.
 
 The existing two-deck view, 80-pixel waveform overview and separate 18-pixel
 phrase strip are preserved. Four persistent time keys do **not** mean a new
@@ -59,3 +61,22 @@ The presentation fixture runs production painting/mouse/timing methods with
 fixture skin lookup and control transport. It checks light/dark text pixels,
 timer lifecycle, size behavior, independent deck controls and legacy fallback.
 This does not substitute for a full application build or Pi touch/playback test.
+
+### Verification recorded September 4, 2026 (Pacific)
+
+- All five commands above passed. Current `wlabel.cpp`, `wnumberpos.cpp` and
+  `tooltips.cpp` also passed Linux/Qt6 syntax checks.
+- The complete native ARM64 build linked successfully and was installed using
+  the checked update/rollback workflow. Installed code revision:
+  `5b6b404d2e36a471e05bbcf2e43c771a0bb43729`.
+- Installed executable SHA-256:
+  `ba58f0d6e4ee248c3293b6c0aca641a06e333f6648c09054342c70f516ac3b4b`.
+- The Pi rendered a loaded track with the large two-deck layout intact;
+  `pflx-session` and `pflx-edmc` were active, the FLX6 PCM stream was RUNNING,
+  and bidirectional MIDI connections were present.
+- Per-deck switching and marquee lifecycle/color correctness passed Qt fixtures.
+  Physical touch testing and a sustained loaded-audio/xrun qualification are
+  **not** claimed. Live UI interaction was stopped when concurrent use was seen.
+- The package's dirty flag reflects pre-existing untracked screenshots; tracked
+  application sources were committed before packaging. Subsequent documentation
+  changes do not require rebuilding the installed binary.

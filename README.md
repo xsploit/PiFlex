@@ -63,8 +63,9 @@ Jump to: [Display](#display-skins-and-waveform-layout) ·
   (blue/orange/cream in **Filt** mode), without changing analysis or audio gain.
 - Long **track titles and artist names scroll** within their existing space,
   pause at either end, and stop animating when hidden or when the text fits.
-- Tap a deck's **time readout** to switch elapsed/remaining independently of the
+- Tap a deck's **Play-view time readout** to switch elapsed/remaining independently of the
   other deck. Each deck's choice is saved; remaining time is the initial default.
+  The compact overview countdown in other views remains a remaining-time overlay.
 - Stable scrolling-waveform height when changing **channel trim**; audio trim
   still changes the sound, while the visualization retains its comparison scale.
 - Migration of stale user skin overrides during updates, so an old local skin
@@ -317,7 +318,8 @@ Verification recorded September 4, 2026:
 - **Eight C++ translation units passed syntax checks**.
 - The presentation adaptation also passed its Qt widget fixtures, Rekordbox
   waveform/phrase regressions, phrase-layout/GL checks, and a **complete linked
-  ARM64 build on the Pi**. See [integration notes](docs/PIONEERED-INTEGRATION.md).
+  ARM64 build and verified installation on the Pi**. See
+  [integration notes](docs/PIONEERED-INTEGRATION.md) for the live-check boundary.
 
 Release qualification still requires physical FLX6 Browse/format-picker and inherited pad-mode
 checks, multi-drive disconnect/eject testing, and a 30-minute two-deck run with
