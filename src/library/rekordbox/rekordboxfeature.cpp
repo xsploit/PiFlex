@@ -1,6 +1,9 @@
 #include "library/rekordbox/rekordboxfeature.h"
 
 #include "library/rekordbox/rekordboxanlz.h"
+#include "library/rekordbox/rekordboxpagechain.h"
+#include "library/rekordbox/rekordboxwaveform.h"
+#include "library/rekordbox/rekordboxphrases.h"
 
 #include <mp3guessenc.h>
 #include <rekordbox_anlz.h>
@@ -625,10 +628,13 @@ QString parseDeviceDB(mixxx::DbConnectionPoolPtr dbConnectionPool, TreeItem* dev
     for (int tableOrderIndex = 0; tableOrderIndex < totalTables; tableOrderIndex++) {
         for (const auto& table : *rekordboxDB.tables()) {
             if (table->type() == tableOrder[tableOrderIndex]) {
-                uint16_t lastIndex = table->last_page()->index();
+                const uint32_t lastIndex = table->last_page()->index();
+                mixxx::rekordbox::PageChainGuard pageChain(
+                        rekordboxDB.len_page(), ks.size());
                 rekordbox_pdb_t::page_ref_t* currentRef = table->first_page();
 
                 while (true) {
+                    pageChain.visit(currentRef->index());
                     rekordbox_pdb_t::page_t* page = currentRef->body();
 
                     if (page->is_data_page()) {
@@ -1015,13 +1021,170 @@ void setHotCue(TrackPointer track,
 namespace mixxx {
 namespace rekordbox {
 
+QString readPhrases(TrackPointer track, int timingOffset, const QString& anlzPath) {
+    const QString extPath = anlzPath.left(anlzPath.length() - 3) + "EXT";
+    if (!QFileInfo::exists(extPath)) {
+        track->setPhrases({});
+        return {};
+    }
+    try {
+        std::ifstream extFile(extPath.toStdString(), std::ios::binary);
+        kaitai::kstream extStream(&extFile);
+        rekordbox_anlz_t ext(&extStream);
+        const rekordbox_anlz_t::song_structure_tag_t* phrases = nullptr;
+        for (const auto& section : *ext.sections()) {
+            if (section->fourcc() == rekordbox_anlz_t::SECTION_TAGS_SONG_STRUCTURE) {
+                if (phrases) throw std::runtime_error("Duplicate phrase analysis");
+                phrases = static_cast<rekordbox_anlz_t::song_structure_tag_t*>(section->body());
+            }
+        }
+        if (!phrases) {
+            track->setPhrases({});
+            return {};
+        }
+        std::ifstream datFile(anlzPath.toStdString(), std::ios::binary);
+        kaitai::kstream datStream(&datFile);
+        rekordbox_anlz_t dat(&datStream);
+        std::vector<double> times;
+        double finalBoundary = std::numeric_limits<double>::quiet_NaN();
+        for (const auto& section : *dat.sections()) {
+            if (section->fourcc() == rekordbox_anlz_t::SECTION_TAGS_BEAT_GRID) {
+                auto* grid = static_cast<rekordbox_anlz_t::beat_grid_tag_t*>(section->body());
+                for (const auto& beat : *grid->beats()) {
+                    times.push_back(beat->time());
+                    finalBoundary = beat->tempo() > 0 ? beat->time() + 6000000.0 / beat->tempo()
+                                                     : std::numeric_limits<double>::quiet_NaN();
+                }
+            }
+        }
+        int ignoredFills = 0;
+        auto imported = decodePhrases(*phrases, times, track->getDuration(), timingOffset,
+                finalBoundary, &ignoredFills);
+        if (ignoredFills) qWarning() << "Ignored out-of-range Rekordbox phrase fills:" << ignoredFills << extPath;
+        track->setPhrases(std::move(imported));
+        return {};
+    } catch (const std::exception& error) {
+        qWarning() << "Could not import Rekordbox phrases:" << extPath << error.what();
+        return extPath;
+    }
+}
+
+QString readThreeBandWaveforms(TrackPointer track,
+        mixxx::audio::SampleRate sampleRate,
+        int timingOffset,
+        const QString& anlzPath) {
+    const QString path = anlzPath.left(anlzPath.length() - 3) + "2EX";
+    const QFileInfo info(path);
+    if (!info.exists()) {
+        return {}; // Older exports legitimately have no three-band data.
+    }
+    try {
+        const double seconds = track->getDuration();
+        if (sampleRate <= 0 || !util_isfinite(seconds) || seconds <= 0 || seconds > 8 * 3600) {
+            throw std::runtime_error("Audio duration unavailable for exported waveform");
+        }
+        const QString identity = QStringLiteral("%1|%2|%3|%4|%5|%6")
+                                         .arg(path)
+                                         .arg(info.size())
+                                         .arg(info.lastModified().toMSecsSinceEpoch())
+                                         .arg(int(sampleRate))
+                                         .arg(seconds, 0, 'g', 17)
+                                         .arg(timingOffset);
+        const QString version = QStringLiteral("Rekordbox 3-band v3");
+        const auto current = track->getWaveform();
+        const auto summary = track->getWaveformSummary();
+        if (current && summary && current->getVersion() == version &&
+                summary->getVersion() == version && current->getDescription() == identity &&
+                summary->getDescription() == identity) {
+            return {};
+        }
+        std::ifstream file(path.toStdString(), std::ios::binary);
+        kaitai::kstream stream(&file);
+        rekordbox_anlz_t analysis(&stream);
+        WaveformPointer importedDetail;
+        WaveformPointer importedSummary;
+        const auto convert = [&](const std::string& bytes, uint32_t stride,
+                                     uint32_t columns, bool overview) -> WaveformPointer {
+            if (stride != 3 || columns == 0 || columns > 4320000 ||
+                    bytes.size() != uint64_t(columns) * stride) {
+                throw std::runtime_error("Unsupported Rekordbox three-band layout");
+            }
+            auto waveform = WaveformPointer(new Waveform(int(sampleRate),
+                    SINT(std::llround(seconds * sampleRate)), 150,
+                    overview ? int(columns * 2) : -1));
+            const double destinationRate = sampleRate / waveform->getAudioVisualRatio();
+            // The overview spans the whole decoded track. Use the exact
+            // allocated rate for identity mapping: rounded frame counts must
+            // not make floor() duplicate a column. Detail remains fixed 150 Hz.
+            const auto data = decodeThreeBandWaveform(bytes,
+                    overview ? destinationRate : 150.0,
+                    destinationRate,
+                    waveform->getDataSize() / 2, timingOffset, true);
+            std::copy(data.begin(), data.end(), waveform->data());
+            waveform->setCompletion(waveform->getDataSize());
+            waveform->setVersion(version);
+            waveform->setDescription(identity);
+            // These are display heights, not native RMS analysis. Do not
+            // serialize them under a native waveform-cache version.
+            waveform->setSaveState(Waveform::SaveState::Saved);
+            return waveform;
+        };
+        for (const auto& section : *analysis.sections()) {
+            if (section->fourcc() == rekordbox_anlz_t::SECTION_TAGS_WAVE_3BAND_SCROLL) {
+                auto* tag = static_cast<rekordbox_anlz_t::wave_3band_scroll_tag_t*>(section->body());
+                importedDetail = convert(tag->entries(), tag->len_entry_bytes(), tag->len_entries(), false);
+            } else if (section->fourcc() == rekordbox_anlz_t::SECTION_TAGS_WAVE_3BAND_PREVIEW) {
+                auto* tag = static_cast<rekordbox_anlz_t::wave_3band_preview_tag_t*>(section->body());
+                importedSummary = convert(tag->entries(), tag->len_entry_bytes(), tag->len_entries(), true);
+            }
+        }
+        // Publish only a complete, validated pair. Otherwise keep the existing
+        // display or allow ordinary audio waveform analysis to fill the gap.
+        if (!importedDetail || !importedSummary) {
+            throw std::runtime_error("Incomplete Rekordbox three-band waveform pair");
+        }
+        track->setWaveform(importedDetail);
+        track->setWaveformSummary(importedSummary);
+        return {};
+    } catch (const std::exception& error) {
+        qWarning() << "Could not import Rekordbox waveform:" << path << error.what();
+        return path;
+    }
+}
+
+QStringList readAnalyzeFiles(TrackPointer track,
+        mixxx::audio::SampleRate sampleRate,
+        int timingOffset,
+        const QString& anlzPath) {
+    QStringList failedPaths;
+    const auto importFile = [&](const QString& filePath, bool beatsOnly) {
+        try {
+            if (!QFileInfo(filePath).isReadable()) {
+                throw std::runtime_error("Rekordbox analysis file is unavailable");
+            }
+            readAnalyze(track, sampleRate, timingOffset, beatsOnly, filePath);
+        } catch (const std::exception& error) {
+            // The generated ANLZ parser constructs all sections before the
+            // importer mutates the track, so a truncated file preserves cues.
+            qWarning() << "Could not import Rekordbox analysis:" << filePath << error.what();
+            failedPaths.append(filePath);
+        }
+    };
+    // DAT-only exports still need BOTH passes: beats first, then cues.
+    importFile(anlzPath, true);
+    const QString extPath = anlzPath.left(anlzPath.length() - 3) + "EXT";
+    importFile(QFileInfo::exists(extPath) ? extPath : anlzPath, false);
+    failedPaths.removeDuplicates();
+    return failedPaths;
+}
+
 void readAnalyze(TrackPointer track,
         mixxx::audio::SampleRate sampleRate,
         int timingOffset,
         bool ignoreCues,
         const QString& anlzPath) {
     if (!QFile(anlzPath).exists()) {
-        return;
+        throw std::runtime_error("Rekordbox analysis file disappeared");
     }
 
     qDebug() << "Rekordbox ANLZ path:" << anlzPath << " for: " << track->getTitle();
@@ -1515,14 +1678,21 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
 
     mixxx::audio::SampleRate sampleRate = track->getSampleRate();
 
-    QString anlzPathExt = anlzPath.left(anlzPath.length() - 3) + "EXT";
-
-    if (QFile(anlzPathExt).exists()) {
-        // Beatgrids appear to be only correct in legacy ANLZ file
-        mixxx::rekordbox::readAnalyze(track, sampleRate, timingOffset, true, anlzPath);
-        mixxx::rekordbox::readAnalyze(track, sampleRate, timingOffset, false, anlzPathExt);
-    } else {
-        mixxx::rekordbox::readAnalyze(track, sampleRate, timingOffset, false, anlzPath);
+    auto failedAnalysis = mixxx::rekordbox::readAnalyzeFiles(
+            track, sampleRate, timingOffset, anlzPath);
+    const auto failedPhrases = mixxx::rekordbox::readPhrases(track, timingOffset, anlzPath);
+    if (!failedPhrases.isEmpty()) failedAnalysis.append(failedPhrases);
+    const auto failedWaveform = mixxx::rekordbox::readThreeBandWaveforms(
+            track, sampleRate, timingOffset, anlzPath);
+    if (!failedWaveform.isEmpty()) {
+        failedAnalysis.append(failedWaveform);
+    }
+    if (!failedAnalysis.isEmpty()) {
+        if (Notifications* pNotifications = Notifications::tryInstance()) {
+            pNotifications->publish(
+                    tr("Some Rekordbox analysis could not be read. Audio is still available; check the USB export."),
+                    Notifications::Severity::Warning);
+        }
     }
 
     // Cues stored on the drive by this unit are the DJ's own and outrank the
@@ -1814,10 +1984,11 @@ QString RekordboxFeature::formatRootViewHtml() const {
     QString summary = tr(
             "Reads databases exported for Pioneer CDJ / XDJ players using "
             "the Rekordbox Export mode.<br/>"
-            "Rekordbox can only export to USB or SD devices with a FAT or "
-            "HFS file system.<br/>"
-            "Mixxx can read a database from any device that contains the "
-            "database folders (<tt>PIONEER</tt> and <tt>Contents</tt>).<br/>"
+            "This reader uses the Device Library export at "
+            "<tt>PIONEER/rekordbox/export.pdb</tt> and its analysis files.<br/>"
+            "OneLibrary-only exports and the desktop master database are not "
+            "supported by this reader. Export the traditional Device Library "
+            "alongside OneLibrary when preparing a drive.<br/>"
             "Not supported are Rekordbox databases that have been moved to "
             "an external device via<br/>"
             "<i>Preferences > Advanced > Database management</i>.<br/>"
@@ -1832,7 +2003,7 @@ QString RekordboxFeature::formatRootViewHtml() const {
             << tr("Beatgrids")
             << tr("Hot cues")
             << tr("Memory cues")
-            << tr("Loops (only the first loop is currently usable in Mixxx)");
+            << tr("Saved hot-cue loops and memory loops (within the available cue banks)");
 
     QString html;
     QString refreshLink = tr("Check for attached Rekordbox USB / SD devices (refresh)");

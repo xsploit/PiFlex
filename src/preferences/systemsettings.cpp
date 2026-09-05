@@ -5,6 +5,11 @@
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QFileInfoList>
+#include <QJsonDocument>
+#include <QJsonObject>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
 #include <QProcess>
 #include <QSet>
 #include <QStorageInfo>
@@ -30,6 +35,35 @@
 #include "util/usbdevice.h"
 
 namespace {
+// Coordinate with the out-of-process writer before native safe-eject. A
+// bounded event loop keeps the UI responsive; a timeout is not permission to
+// unplug. Connection refused means there is currently no companion writer;
+// normal (never lazy) umount still protects against a newly started writer.
+bool coordinateEdmcEject(const QString& mountPoint, bool prepare, QString* error) {
+    QNetworkAccessManager network;
+    QNetworkRequest request(QUrl(QStringLiteral("http://127.0.0.1:17642/v1/storage/") +
+            (prepare ? QStringLiteral("prepare-eject") : QStringLiteral("cancel-eject"))));
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QStringLiteral("application/json"));
+    auto* reply = network.post(request, QJsonDocument(QJsonObject{
+            {QStringLiteral("path"), mountPoint}}).toJson(QJsonDocument::Compact));
+    QEventLoop loop;
+    QTimer deadline;
+    deadline.setSingleShot(true);
+    QObject::connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    QObject::connect(&deadline, &QTimer::timeout, &loop, &QEventLoop::quit);
+    deadline.start(5000);
+    loop.exec();
+    const bool finished = reply->isFinished();
+    const bool absent = reply->error() == QNetworkReply::ConnectionRefusedError;
+    const bool ready = finished && (absent || (reply->error() == QNetworkReply::NoError &&
+            QJsonDocument::fromJson(reply->readAll()).object().value(QStringLiteral("ready")).toBool()));
+    if (!ready && error) {
+        *error = QStringLiteral("EDMC has not released this drive; cancel its download and retry eject");
+    }
+    if (!finished) reply->abort();
+    return ready;
+}
+
 const QString kGroup = QStringLiteral("[System]");
 // Fork-wide preference namespace (distinct from the [System] tab COs above).
 const QString kBiteDj = QStringLiteral("[BiteDJ]");
@@ -588,6 +622,10 @@ QStringList SystemSettings::mountsOnSameUsbDevice(int index) const {
 bool SystemSettings::ejectMountPoint(const QString& mountPoint,
         int* pUnloaded,
         QString* pError) {
+    if (!coordinateEdmcEject(mountPoint, true, pError)) {
+        coordinateEdmcEject(mountPoint, false, nullptr);
+        return false;
+    }
     // A recording writing to this drive holds an open file descriptor on it, so
     // the unmount below would fail EBUSY for as long as it runs. Stop it first
     // and let the retry loop at the end of this function cover the close, which
@@ -654,6 +692,7 @@ bool SystemSettings::ejectMountPoint(const QString& mountPoint,
     if (pError) {
         *pError = error;
     }
+    coordinateEdmcEject(mountPoint, false, nullptr);
     return false;
 }
 

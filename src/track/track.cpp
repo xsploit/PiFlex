@@ -936,6 +936,21 @@ void Track::setWaveformSummary(ConstWaveformPointer pWaveform) {
     emit waveformSummaryUpdated();
 }
 
+mixxx::PhraseList Track::getPhrases() const {
+    const auto locked = lockMutex(&m_qMutex);
+    return m_phrases;
+}
+
+void Track::setPhrases(mixxx::PhraseList phrases) {
+    {
+        const auto locked = lockMutex(&m_qMutex);
+        if (m_phrases == phrases) return;
+        m_phrases = std::move(phrases);
+    }
+    // Derived USB metadata is session-local; never dirty the audio tags/cues.
+    emit phrasesUpdated();
+}
+
 void Track::setMainCuePosition(mixxx::audio::FramePos position) {
     auto locked = lockMutex(&m_qMutex);
 

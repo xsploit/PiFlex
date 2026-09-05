@@ -41,8 +41,8 @@ see [Current status](#current-status) for that distinction.
   Settings. These are presentation choices, not emulations of Pioneer firmware.
 - **Waveform controls:** RGB, filtered, and stacked styles; fixed or EQ-responsive
   rendering; Slim/PiFlex/Bold visual height and Wide/PiFlex/Near zoom presets.
-  The full-deck-width layout fix is included. These controls are separate from
-  the newer imported-waveform normalization work described below.
+  The full-deck-width layout fix is included. These controls also apply to the
+  imported-waveform display described below.
 - **Library and preparation:** All Tracks combines local and Rekordbox tracks,
   a controller-first Prepare list supports set preparation, and library column
   visibility and relative widths are configurable. Library text size persists
@@ -60,26 +60,30 @@ see [Current status](#current-status) for that distinction.
   companion, not the audio callback.
 - **Appliance controls:** USB drive management, an explicit Restart BiteDJ
   action, and supervisor handling that distinguishes requested restarts from
-  failures. The newer download-aware eject handshake is still local work,
-  as noted below.
+  failures. Download-aware eject coordinates with EDMC before unloading and
+  unmounting the selected drive, as described below.
 
 Source entry points: [settings and display controls](res/skins/BiteDJ/settings.xml),
 [BiteDJ skin](res/skins/BiteDJ/), [FLX6 mapping](res/controllers/Pioneer-DDJ-FLX6.midi.xml),
 [library integration](src/library/), [native EDMC client](src/library/edmc/),
 and [EDMC companion](edmc-companion/README.md).
 
-### Local development work, not yet published (September 4, 2026)
+### Rekordbox analysis and storage integration
 
-These changes exist in the development workspace but are **not included in the
-published source checkpoint documented here**. This README update does not ship
-them. They require their own reviewed application commit/build and validation.
+The following implementations and regression tests are included in this branch.
+Build a new application bundle to install native changes on an older image;
+pushing source does not update a running Pi automatically.
 
-| Area | Local implementation and remaining boundary |
+| Area | Included implementation and compatibility boundary |
 | --- | --- |
 | Rekordbox analysis loading | Safer database page-chain traversal and analysis parsing, including DAT-only beat/cue handling and preservation of user overrides. Malformed exports must not silently replace good track state. |
 | Exported waveforms | Import of `.2EX` three-band overview/detail data, with amplitude normalization adapted to BiteDJ's renderer. Native style, gain, and zoom remain separate controls; this is not pixel-identical Pioneer rendering. |
 | Phrase display | Imported `PSSI` phrases appear below the whole-track overview and along the lower part of the scrolling waveform. Phrase/fill timing follows the exported beat grid. Tracks without exported phrase data have no imported phrase strip; this does not generate missing analysis. |
-| Native storage integration | Keep downloaded-track Load/Preview state tied to its actual storage identity, and coordinate the Settings eject action with the companion. Companion-side storage/eject APIs are published; these native-client changes are not yet published. |
+| Native storage integration | Keep downloaded-track Load/Preview state tied to its actual storage identity, and coordinate the Settings eject action with the companion. Both the companion APIs and native-client integration are included. Multiple USB destinations stay distinct; explicit SD fallback applies to new jobs, not migration of interrupted downloads. |
+
+See [Rekordbox compatibility and tests](docs/rekordbox-read-compatibility.md) and
+[storage, eject, and update validation](docs/storage-reliability.md) for the
+test commands and remaining hardware acceptance checks.
 
 The Rekordbox scope is **reading existing exported USB libraries and their
 available analysis**. Full OneLibrary/Device Library Plus-only support, desktop
@@ -142,14 +146,18 @@ Implemented but awaiting another physical-controller verification pass:
   native library views, and EDMC screens
 - Encoder-driven EDMC file-format selection
 
+PREEMPT_RT is enabled on the development Pi, as confirmed by its owner on
+September 4, 2026. The earlier description of it as merely staged was stale.
+The Pi was unreachable during this documentation refresh, so the exact running
+kernel version was not re-read. This does not establish a measured zero-xrun
+result or change the default kernel selected by every image build.
+
 Not yet proven:
 
 - A 30-minute two-deck run with measured zero xruns
 - Safe analysis and EDMC downloading under worst-case live load
-- The staged PREEMPT_RT kernel on the complete display, USB, and audio stack.
-  The current image boots the packaged Pi 5 kernel first so recovery remains
-  available; the RT kernel is a measured follow-up test, not a performance
-  claim.
+- Sustained, measured PREEMPT_RT behavior under simultaneous display, USB,
+  analysis, download, and two-deck audio load
 - Controllers, displays, or Raspberry Pi boards other than the target above
 - A stable, supported end-user image/update channel
 

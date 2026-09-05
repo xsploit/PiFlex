@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QString>
+#include <QStringList>
 
 #include "audio/types.h"
 #include "track/track_decl.h"
@@ -11,9 +12,8 @@ namespace rekordbox {
 /// Import beats and/or cues from a rekordbox ANLZ file onto a track.
 ///
 /// `ignoreCues` picks which half of the file is read: beats when true, cues
-/// when false. Both halves are never wanted from the same file — the beat grid
-/// is only correct in the legacy `.DAT`, while cues are preferred from the
-/// `.EXT` when one exists.
+/// when false. The grid comes from `.DAT`; cues come from `.EXT` if present,
+/// otherwise `.DAT` is read a second time for cues. Throws on read/parse errors.
 ///
 /// The cue pass treats the ANLZ file as the authority for the whole track:
 /// hot cues land in the hot cue bank, memory cues in the memory cue bank (see
@@ -28,6 +28,13 @@ void readAnalyze(TrackPointer track,
         audio::SampleRate sampleRate,
         int timingOffset,
         bool ignoreCues,
+        const QString& anlzPath);
+
+/// Import the two passes without letting missing/corrupt analysis prevent
+/// loading audio. Returns failed file paths for a user-facing warning.
+QStringList readAnalyzeFiles(TrackPointer track,
+        audio::SampleRate sampleRate,
+        int timingOffset,
         const QString& anlzPath);
 
 } // namespace rekordbox

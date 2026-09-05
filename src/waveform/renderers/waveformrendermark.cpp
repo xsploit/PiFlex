@@ -1,6 +1,8 @@
 #include "waveform/renderers/waveformrendermark.h"
 
 #include "util/painterscope.h"
+#include "track/track.h"
+#include "waveform/renderers/phrasestrip.h"
 #include "waveform/renderers/waveformwidgetrenderer.h"
 
 class ImageGraphics : public WaveformMark::Graphics {
@@ -27,6 +29,15 @@ void WaveformRenderMark::draw(QPainter* painter, QPaintEvent* /*event*/) {
     QList<WaveformWidgetRenderer::WaveformMarkOnScreen> marksOnScreen;
 
     painter->setWorldMatrixEnabled(false);
+    const auto track = m_waveformRenderer->getTrackInfo();
+    if (track && track->getSampleRate() > 0) {
+        const double seconds = m_waveformRenderer->getTrackSamples() / (double(track->getSampleRate()) * 2);
+        mixxx::paintPhraseStrip(*painter, track->getPhrases(),
+                QRectF(0, 0, m_waveformRenderer->getWidth(), m_waveformRenderer->getHeight()),
+                m_waveformRenderer->getOrientation(),
+                m_waveformRenderer->getFirstDisplayedPosition() * seconds,
+                m_waveformRenderer->getLastDisplayedPosition() * seconds, scaleFactor());
+    }
 
     for (const auto& pMark : std::as_const(m_marks)) {
         const QImage& image = static_cast<ImageGraphics*>(pMark->m_pGraphics.get())->image();

@@ -24,6 +24,24 @@ const QString kViewName = QStringLiteral("EDMCHOME");
 const QUrl kApiBase(QStringLiteral("http://127.0.0.1:17642"));
 const QString kEdmcGroup = QStringLiteral("[EDMC]");
 
+QString downloadStorageRoot(const QJsonObject& track, const QJsonObject& status) {
+    const auto storage = status.value(QStringLiteral("storage")).toObject();
+    const QString root = track.value(QStringLiteral("storageRoot")).toString();
+    const QString id = track.value(QStringLiteral("storageId")).toString();
+    if (root.isEmpty()) {
+        return storage.value(QStringLiteral("usbRoot")).toString(); // older companion
+    }
+    for (const auto& item : storage.value(QStringLiteral("volumes")).toArray()) {
+        const auto volume = item.toObject();
+        if (volume.value(QStringLiteral("rootPath")).toString() == root &&
+                volume.value(QStringLiteral("id")).toString() == id &&
+                !volume.value(QStringLiteral("ejecting")).toBool()) {
+            return root;
+        }
+    }
+    return {}; // never reinterpret a completed job on a different USB
+}
+
 QString fileOnSelectedUsb(const QString& usbRoot, const QString& relativePath) {
     if (usbRoot.isEmpty() || relativePath.isEmpty() || QDir::isAbsolutePath(relativePath)) {
         return {};
@@ -204,6 +222,9 @@ void EdmcFeature::request(const QString& operation,
     pReply->setProperty("edmcOperation", operation);
     connect(pReply, &QNetworkReply::finished, this, &EdmcFeature::onReplyFinished);
     ++m_pendingRequests;
+    QTimer::singleShot(10000, pReply, [pReply]() {
+        if (!pReply->isFinished()) pReply->abort();
+    });
 }
 
 void EdmcFeature::onReplyFinished() {
@@ -310,14 +331,13 @@ void EdmcFeature::addCompletedDownloadToLibrary(const QJsonObject& job) {
                                       .value(QStringLiteral("track"))
                                       .toObject();
     const QString relativePath = track.value(QStringLiteral("relativePath")).toString();
-    const QString importKey = track.value(QStringLiteral("providerId")).toString().isEmpty()
+    const QString trackKey = track.value(QStringLiteral("providerId")).toString().isEmpty()
             ? relativePath
             : track.value(QStringLiteral("providerId")).toString();
-    const QString usbRoot = m_status.value(QStringLiteral("storage"))
-                                    .toObject()
-                                    .value(QStringLiteral("usbRoot"))
-                                    .toString();
-    if (relativePath.isEmpty() || importKey.isEmpty() || usbRoot.isEmpty() ||
+    const QString usbRoot = downloadStorageRoot(track, m_status);
+    const QString importKey = track.value(QStringLiteral("storageId")).toString() +
+            QStringLiteral(":") + usbRoot + QStringLiteral("/") + trackKey;
+    if (relativePath.isEmpty() || trackKey.isEmpty() || usbRoot.isEmpty() ||
             m_importedDownloads.contains(importKey)) {
         return;
     }
@@ -505,10 +525,7 @@ void EdmcFeature::loadDownloadedTrack(
     const QJsonObject release = releaseForTopic(topicId);
     const QJsonObject download = release.value(QStringLiteral("download")).toObject();
     const QString relativePath = download.value(QStringLiteral("relativePath")).toString();
-    const QString usbRoot = m_status.value(QStringLiteral("storage"))
-                                    .toObject()
-                                    .value(QStringLiteral("usbRoot"))
-                                    .toString();
+    const QString usbRoot = downloadStorageRoot(download, m_status);
     if (relativePath.isEmpty() || usbRoot.isEmpty()) {
         m_message = tr("Download this release before loading it");
         render();

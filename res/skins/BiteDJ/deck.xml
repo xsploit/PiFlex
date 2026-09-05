@@ -434,6 +434,11 @@
       <WidgetGroup>
         <ObjectName>DeckOverviewContainer</ObjectName>
         <Layout>vertical</Layout>
+        <Size>0me,98f</Size>
+        <Children>
+      <WidgetGroup>
+        <ObjectName>DeckWaveformClip</ObjectName>
+        <Layout>vertical</Layout>
         <Size>0me,80f</Size>
         <Children>
           <Overview>
@@ -632,6 +637,14 @@
               <Transform><Not/></Transform>
             </Connection>
           </Overview>
+        </Children>
+      </WidgetGroup>
+          <!-- Keep phrases outside the 80px clip of the 160px waveform. -->
+          <PhraseOverview>
+            <ObjectName>DeckPhraseOverview</ObjectName>
+            <Size>0me,18f</Size>
+            <Channel><Variable name="channel"/></Channel>
+          </PhraseOverview>
         </Children>
       </WidgetGroup>
     </Children>

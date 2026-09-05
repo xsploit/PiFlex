@@ -4,6 +4,7 @@
 #include <QPainterPath>
 
 #include "track/track.h"
+#include "waveform/renderers/phrasestrip.h"
 #include "util/colorcomponents.h"
 #include "waveform/renderers/allshader/matrixforwidgetgeometry.h"
 #include "waveform/renderers/allshader/rgbadata.h"
@@ -79,6 +80,7 @@ void allshader::WaveformRenderMark::initializeGL() {
     m_digitsRenderer.init();
     m_rgbaShader.init();
     m_textureShader.init();
+    m_phraseLabels.clear();
 
     // Will create textures so requires OpenGL context
     updateMarkImages();
@@ -189,6 +191,79 @@ void allshader::WaveformRenderMark::drawMark(
     m_rgbaShader.release();
 }
 
+void allshader::WaveformRenderMark::drawPhrases(const QMatrix4x4& matrix) {
+    const auto track = m_waveformRenderer->getTrackInfo();
+    if (!track || m_isSlipRenderer || track->getSampleRate() <= 0) return;
+    const auto phrases = track->getPhrases();
+    if (phrases.isEmpty()) return;
+    const float length = m_waveformRenderer->getLength();
+    const float breadth = m_waveformRenderer->getBreadth();
+    const int height = std::max(1, int(std::min(16 * scaleFactor(), double(breadth / 3))));
+    const float y = breadth - height;
+    const double dpr = m_waveformRenderer->getDevicePixelRatio();
+    if (dpr <= 0 || length <= 0 || breadth <= 0) return;
+    if (m_phraseLabelDpr != dpr || m_phraseLabelHeight != height) {
+        m_phraseLabels.clear(); // current GL context; never rebuild text per frame
+        m_phraseLabelDpr = dpr;
+        m_phraseLabelHeight = height;
+    }
+    VertexData vertices;
+    RGBAData colors;
+    struct Label { QString text; float x; float width; };
+    QList<Label> labels;
+    const auto xAt = [&](double seconds) {
+        return float(std::clamp(m_waveformRenderer->transformSamplePositionInRendererWorld(
+                                       seconds * double(track->getSampleRate()) * 2),
+                0.0, double(length)));
+    };
+    const auto rectangle = [&](float x1, float x2, QColor color) {
+        if (x2 <= x1) return;
+        vertices.addRectangle(x1, y, x2, breadth);
+        float r, g, b, a; getRgbF(color, &r, &g, &b, &a);
+        colors.addForRectangle(r, g, b, a);
+    };
+    for (const auto& phrase : phrases) {
+        const float x1 = xAt(phrase.startSeconds), x2 = xAt(phrase.endSeconds);
+        if (x2 <= x1) continue;
+        QColor color = mixxx::phraseColor(phrase.kind);
+        color.setAlphaF(0.75);
+        rectangle(x1, x2, color);
+        if (phrase.fillSeconds >= phrase.startSeconds && phrase.fillSeconds < phrase.endSeconds) {
+            rectangle(xAt(phrase.fillSeconds), x2, color.lighter(130));
+        }
+        rectangle(x1, std::min(x1 + 1, x2), QColor(20, 20, 20));
+        labels.append({phrase.label, x1 + 3, x2 - x1 - 6});
+    }
+    if (vertices.size() == 0) return;
+    m_rgbaShader.bind();
+    m_rgbaShader.setUniformValue(m_rgbaShader.matrixLocation(), matrix);
+    m_rgbaShader.enableAttributeArray(m_rgbaShader.positionLocation());
+    m_rgbaShader.setAttributeArray(m_rgbaShader.positionLocation(), GL_FLOAT, vertices.constData(), 2);
+    m_rgbaShader.enableAttributeArray(m_rgbaShader.colorLocation());
+    m_rgbaShader.setAttributeArray(m_rgbaShader.colorLocation(), GL_FLOAT, colors.constData(), 4);
+    glDrawArrays(GL_TRIANGLES, 0, vertices.size());
+    m_rgbaShader.disableAttributeArray(m_rgbaShader.positionLocation());
+    m_rgbaShader.disableAttributeArray(m_rgbaShader.colorLocation());
+    m_rgbaShader.release();
+    if (height < 10) return;
+    for (const auto& label : labels) {
+        auto& texture = m_phraseLabels[label.text];
+        if (!texture) {
+            QFont font; font.setPixelSize(std::max(1, height - 3));
+            const int width = QFontMetrics(font).horizontalAdvance(label.text) + 2;
+            QImage image(QSize(int(std::ceil(width * dpr)), int(std::ceil(height * dpr))),
+                    QImage::Format_ARGB32_Premultiplied);
+            image.setDevicePixelRatio(dpr);
+            image.fill(Qt::transparent);
+            { QPainter painter(&image); painter.setFont(font); painter.setPen(Qt::white);
+              painter.drawText(QRect(0, 0, width, height), Qt::AlignLeft | Qt::AlignVCenter, label.text); }
+            texture = std::make_shared<OpenGLTexture2D>();
+            texture->setData(image);
+        }
+        if (texture->width() / dpr <= label.width) drawTexture(matrix, label.x, y, texture.get());
+    }
+}
+
 void allshader::WaveformRenderMark::paintGL() {
     if (m_isSlipRenderer && !m_waveformRenderer->isSlipActive()) {
         return;
@@ -212,6 +287,7 @@ void allshader::WaveformRenderMark::paintGL() {
     updateMarkImages();
 
     QMatrix4x4 matrix = matrixForWidgetGeometry(m_waveformRenderer, false);
+    drawPhrases(matrix); // independent layer, beneath cue labels and play marker
 
     const double playPosition = m_waveformRenderer->getTruePosSample();
     double nextMarkPosition = std::numeric_limits<double>::max();

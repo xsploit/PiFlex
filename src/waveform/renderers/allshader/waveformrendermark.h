@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QColor>
+#include <QMap>
 
 #include "shaders/rgbashader.h"
 #include "shaders/textureshader.h"
@@ -54,6 +55,10 @@ class allshader::WaveformRenderMark : public ::WaveformRenderMarkBase,
     void drawTexture(const QMatrix4x4& matrix, float x, float y, QOpenGLTexture* pTexture);
     void updateUntilMark(double playPosition, double markerPosition);
     void drawUntilMark(const QMatrix4x4& matrix, float x);
+    void drawPhrases(const QMatrix4x4& matrix);
+    QMap<QString, std::shared_ptr<OpenGLTexture2D>> m_phraseLabels;
+    double m_phraseLabelDpr = 0;
+    int m_phraseLabelHeight = 0;
     float getMaxHeightForText(float proportion) const;
 
     mixxx::RGBAShader m_rgbaShader;

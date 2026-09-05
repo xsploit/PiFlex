@@ -23,6 +23,12 @@ The current image profile includes:
 - Hash-checked application updates and local rollback
 - Optional PREEMPT_RT kernel build configuration
 
+The development Pi already has PREEMPT_RT enabled (owner-confirmed September 4,
+2026). The kernel configuration remains selectable in the image build; the
+package list above is not a statement of that Pi's currently running kernel.
+Its exact kernel version was not re-read during this update because the device
+was unreachable. Sustained zero-xrun testing remains a separate acceptance gate.
+
 Internal commands and service filenames currently retain the short `pflx-*`
 prefix. The user-facing project and OS name is PiFlex.
 
@@ -68,16 +74,35 @@ with Raspberry Pi Imager using **Use custom**.
 & .\os\scripts\package-update.ps1
 ```
 
-On the Pi:
+This packages the existing ARM64 artifact; it does **not** rebuild BiteDJ.
+Rebuild that artifact from the intended source first. The manifest records the
+packaging checkout revision, dirty state, and binary hash separately; it does
+not prove which source produced an older binary.
+
+Copy the bundle, adjacent `.sha256`, and emitted `apply-update.sh` to the Pi.
+Run over SSH, not a terminal inside the kiosk session that the update stops:
 
 ```sh
-sudo pflx-update /path/to/piflex-update.tar.gz
+sudo bash /path/to/apply-update.sh /path/to/pflx-update.tar.gz
 sudo pflx-rollback
 ```
 
-The updater only accepts BiteDJ, Mixxx resources, and the EDMC companion. It
-verifies the bundle hash, rejects unexpected paths and symbolic links, and
-retains the previous application under `/var/backups/pflx`.
+The bootstrap runs the new updater even on images with the older updater.
+The v2 allowlist includes BiteDJ, resources, EDMC, the restart supervisor,
+companion launcher, USB mount helper, updater and rollback helper. The mount
+helper's username template is resolved for the actual kiosk user.
+
+The updater verifies the bundle hash and required payload, rejects unexpected
+paths and links, serializes updates, and verifies a complete rollback copy
+**before** stopping services or replacing installed files. Copy failures abort
+the update. Installation failures attempt restoration; failed restoration
+leaves services stopped. Complete v2 backups live under `/var/backups/pflx`.
+Legacy unverified backups are not accepted by v2 rollback. Restoring an older
+runtime also restores its older updater, so keep the bootstrap for subsequent
+updates. Checksums detect corruption, not publisher authenticity.
+
+See [storage reliability and validation](../docs/storage-reliability.md) for
+tests and the remaining hardware acceptance gates.
 
 ## Hardware acceptance gates
 
