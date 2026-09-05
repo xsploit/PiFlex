@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 
 import { readJson, writeJsonAtomic } from "./atomic-json.mjs";
-import { assertSupportedAudio } from "./download.mjs";
+import { inspectAudioSignature } from "./download.mjs";
 import { DEFAULT_SETTINGS, normalizeSettings } from "./settings.mjs";
 
 const EMPTY_LIBRARY = Object.freeze({ version: 1, updatedAt: null, tracks: [] });
@@ -112,7 +112,10 @@ export class UsbLibrary {
                         (Number(entry.bytes) > 0 && stats.size !== Number(entry.bytes))) {
                     continue;
                 }
-                await assertSupportedAudio(absolutePath);
+                // Inventory is O(headers), not an ffprobe scan of every track
+                // on every drive selection/download. New downloads are probed
+                // before commit; an explicitly reused duplicate is probed too.
+                await inspectAudioSignature(absolutePath);
             } catch {
                 continue;
             }
@@ -148,7 +151,7 @@ export class UsbLibrary {
             await handle.close();
         }
         try {
-            await assertSupportedAudio(finalPath);
+            await inspectAudioSignature(finalPath);
         } catch (error) {
             await fs.rm(finalPath, { force: true });
             throw error;

@@ -1,5 +1,7 @@
 #!/bin/sh
 set -eu
+exec 9>/run/lock/pflx-usb-mount.lock
+flock 9
 
 action=${1:?add or remove required}
 device=${2:?block device required}
@@ -17,6 +19,9 @@ rootdev=$(findmnt -nro SOURCE / 2>/dev/null || true)
 existing=$(findmnt -nro TARGET --source "$device" 2>/dev/null || true)
 if [ "$action" = remove ]; then
     [ -z "$existing" ] || umount "$existing"
+    if [ -n "$existing" ]; then
+        case "$existing" in "$base"/*) rmdir "$existing" 2>/dev/null || true ;; esac
+    fi
     exit 0
 fi
 
@@ -30,6 +35,14 @@ label=$(blkid -s LABEL -o value "$device" 2>/dev/null || true)
 [ -n "$label" ] || label=$(basename "$device")
 label=$(printf '%s' "$label" | tr -cs 'A-Za-z0-9._-' '_')
 target="$base/$label"
+# Two sticks can have identical labels. Never mount one over another.
+if mountpoint -q "$target"; then
+    target="$base/$label-$(basename "$device")"
+    if mountpoint -q "$target"; then
+        echo 'PFLX: mount target already occupied' >&2
+        exit 1
+    fi
+fi
 
 install -d -o "$user" -g "$user" "$base" "$target"
 case "$fstype" in

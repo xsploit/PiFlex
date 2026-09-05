@@ -13,5 +13,8 @@
   },
   "dependencies": {
     "playwright-core": "^1.55.0"
+  },
+  "devDependencies": {
+    "linkedom": "0.18.13"
   }
 }

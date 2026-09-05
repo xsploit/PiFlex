@@ -18,6 +18,6 @@ test("partial settings updates retain the other current value", () => {
             downloadFolder: "Music/Downloads",
             organizeByGenre: true,
         }),
-        { downloadFolder: "Music/Downloads", organizeByGenre: false },
+        { downloadFolder: "Music/Downloads", organizeByGenre: false, fallbackToSd: true },
     );
 });

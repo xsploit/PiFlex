@@ -80,6 +80,30 @@ Not yet proven:
 
 ## Repository layout
 
+### EDMC reliability update (September 2026)
+
+The companion now reads the current genre catalog, handles MP3/WAV/FLAC labels
+more reliably, and avoids visiting every preview page just to list file types.
+Clearly labelled options resolve from one release page; recent resolve results
+are cached. Downloaded audio is checked with `ffprobe` before being marked ready,
+with connection/idle timeouts and partial-file cleanup.
+
+The storage layer supports distinct USB identities and an explicit SD fallback
+for new work when the selected USB is unavailable. Updates require verified
+backups and include their runtime scripts. Existing Pi images need the
+`ffmpeg` package (which supplies `ffprobe`) before installing this update; new
+image builds include it.
+
+Local verification: 51 Node checks pass on Linux/WSL; Windows passes 49 with
+two Linux-only skips. Six updater fixture tests pass. These changes have **not
+yet been deployed or performance-tested on the Pi**; they are not a claim of
+faster Internet transfers or interruption-free live playback.
+
+See the [companion README](edmc-companion/README.md) and
+[parsing, validation and latency notes](docs/edmc-parser-and-validation.md).
+
+### Source directories
+
 - `os/` is the PiFlex OS image definition: Debian package layer, Pi 5 display
   setup, kiosk, service priorities, CPU/IRQ tuning, recovery, USB mounting,
   updates, rollback, diagnostics, and optional RT-kernel configuration.

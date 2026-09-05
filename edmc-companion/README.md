@@ -38,9 +38,13 @@ building blocks that stay.
 - The final media transfer is streamed directly to the selected USB. The
   default destination is `Music/EDMC/<subsection>`, but the folder and whether
   subsection folders are used are persisted settings. A track
-  is first written under `.bitedj/edmc/incoming`, synchronized, identified by
-  its MP3, FLAC, or WAV magic bytes, and renamed into the configured folder
-  with the verified extension on the same filesystem.
+  is first written under `.bitedj/edmc/incoming`, synchronized, checked by its
+  signature and a bounded `ffprobe` audio-stream/packet inspection, and renamed
+  into the configured folder with the detected extension on the same filesystem.
+- A missing selected USB can fall back to explicitly managed SD storage for
+  new work. A running download is pinned to its original destination; removal
+  does not redirect it into an empty system-disk mountpoint. Two USB devices
+  retain separate identities. Drive changes are rejected while downloads run.
 - `library.json` is also replaced atomically. It is the future source for the
   BiteDJ `EDMC Downloads` library feature.
 - The service is intended to run with low CPU and I/O weight. BiteDJ remains
@@ -48,14 +52,47 @@ building blocks that stay.
 
 ## Development run
 
+Requires Node.js 20+, system Chromium, and `ffprobe` from the `ffmpeg` package.
+The tests also use `ffmpeg` to generate real audio fixtures. On Debian/Pi images,
+install `ffmpeg` before updating an existing installation. New PiFlex images
+include it, and the updated installer refuses this payload if it is missing.
+
 ```bash
-npm install
+npm ci
 npm test
 npm start -- --ui --usb-root /media/$USER/MUSIC_USB
 ```
 
 By default the service expects Chromium at `/usr/bin/chromium`. Override it
 with `BITEDJ_EDMC_CHROMIUM=/path/to/chromium`.
+An explicit probe executable can be selected with
+`BITEDJ_EDMC_FFPROBE=/path/to/ffprobe`. Missing validation tooling produces a
+clear download error; there is no silent signature-only fallback.
+
+## Format lookup and speed
+
+- Current grouped site navigation supplies the genre catalog, deduplicated by
+  numeric genre ID rather than URL spelling.
+- MP3/WAV/FLAC labels beside the uploaded file are parsed separately from post
+  commentary. Only unknown types need a BeatEXS metadata visit (12-second limit).
+  An MP3 preview does not imply the uploaded source is MP3.
+- Two clearly labelled options need one release-page navigation instead of
+  three. Repeated resolve requests use a 15-minute cache. Old parser labels are
+  invalidated once without deleting downloaded files.
+- Connection/header and body-idle timeouts default to 30 seconds; stalled or
+  invalid downloads do not remain as completed tracks. Progress updates are
+  throttled rather than emitted for every network chunk.
+- Audio checks record codec, duration, sample rate, channels and bitrate.
+  They reject signature-only files and AAC disguised as MP3, but are not a full
+  decode or an audible-quality guarantee. Existing library inventory stays a
+  cheap size/signature check rather than rescanning every file.
+
+Local checks: **51 pass on Linux/WSL; 49 pass and two Linux-only skips on Windows**
+(Node's count includes its discovered fixture helper). Live browser samples
+confirmed the repaired catalog and dual-format labels. Pi deployment, live-host
+throughput and simultaneous playback/load testing remain outstanding.
+
+See [implementation and test details](../docs/edmc-parser-and-validation.md).
 
 Local state and the Chromium profile live below
 `$XDG_DATA_HOME/bitedj-edmc`, or `~/.local/share/bitedj-edmc` when
@@ -67,8 +104,10 @@ Local state and the Chromium profile live below
 - `GET /v1/subscriptions`
 - `PUT /v1/subscriptions`
 - `POST /v1/storage` with `{ "path": "/media/..." }`
+- `POST /v1/storage/prepare-eject` with `{ "path": "/media/..." }`
+- `POST /v1/storage/cancel-eject` with `{ "path": "/media/..." }`
 - `GET /v1/settings`
-- `PUT /v1/settings` with `{ "downloadFolder": "Music/EDMC", "organizeByGenre": true }`
+- `PUT /v1/settings` with `{ "downloadFolder": "Music/EDMC", "organizeByGenre": true, "fallbackToSd": true }`
 - `POST /v1/ui/open`
 - `POST /v1/auth/open`
 - `POST /v1/auth/check`

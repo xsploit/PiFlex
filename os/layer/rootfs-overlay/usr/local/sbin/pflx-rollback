@@ -1,18 +1,3 @@
 #!/bin/sh
 set -eu
-
-backup=${1:-/var/backups/pflx/latest}
-backup=$(readlink -f "$backup")
-case "$backup" in /var/backups/pflx/*) ;; *) echo 'Backup must be below /var/backups/pflx' >&2; exit 1 ;; esac
-test -d "$backup"
-
-test -x "$backup/usr/local/bin/mixxx" && install -m 0755 "$backup/usr/local/bin/mixxx" /usr/local/bin/mixxx
-test -d "$backup/usr/local/share/mixxx" && rsync -a --delete "$backup/usr/local/share/mixxx/" /usr/local/share/mixxx/
-test -d "$backup/opt/pflx/edmc-companion" && rsync -a --delete "$backup/opt/pflx/edmc-companion/" /opt/pflx/edmc-companion/
-chown -R root:root /opt/pflx/edmc-companion
-find /opt/pflx/edmc-companion -type d -exec chmod 0755 {} +
-find /opt/pflx/edmc-companion -type f -exec chmod 0644 {} +
-find /opt/pflx/edmc-companion/node_modules/.bin -type f -exec chmod 0755 {} + 2>/dev/null || true
-systemctl restart pflx-edmc.service
-pkill -TERM -x mixxx 2>/dev/null || true
-printf 'Restored %s\n' "$backup"
+exec /usr/local/sbin/pflx-update --rollback "${1:-/var/backups/pflx/latest}"

@@ -1,7 +1,7 @@
 const elements = Object.fromEntries([
     "overallStatus", "usbRoot", "saveUsb", "storageStatus", "signIn", "checkAuth",
     "downloadFolder", "organizeByGenre", "saveSettings", "closeBrowser", "authStatus",
-    "subscriptions", "releases", "jobs", "refreshView", "toast",
+    "subscriptions", "releases", "jobs", "refreshView", "toast", "fallbackToSd",
 ].map((id) => [id, document.getElementById(id)]));
 
 let subscriptions = [];
@@ -51,13 +51,25 @@ function renderStatus(status) {
         : `Chromium: ${status.browser.mode}`;
     elements.authStatus.textContent = status.auth.message;
     elements.authStatus.className = status.auth.state === "signed-in" ? "downloaded" : "muted";
-    elements.storageStatus.textContent = status.storage.usbRoot || "No USB selected.";
-    if (status.storage.usbRoot && document.activeElement !== elements.usbRoot) {
-        elements.usbRoot.value = status.storage.usbRoot;
+    elements.storageStatus.textContent = [status.storage.usbRoot || "No destination available", status.storage.message].filter(Boolean).join(" — ");
+    const volumes = status.storage.volumes || [];
+    const signature = JSON.stringify(volumes.map(v => [v.rootPath,v.label,v.writable,v.ejecting]));
+    if (elements.usbRoot.dataset.signature !== signature) {
+        const selected = elements.usbRoot.value || status.storage.requestedRoot || status.storage.usbRoot;
+        elements.usbRoot.replaceChildren(...volumes.map(v => {
+            const option = document.createElement("option");
+            option.value = v.rootPath;
+            option.textContent = `${v.label} — ${v.rootPath}${v.ejecting ? " (ejecting)" : !v.writable ? " (read-only)" : ""}`;
+            option.disabled = !v.writable || v.ejecting;
+            return option;
+        }));
+        elements.usbRoot.value = volumes.some(v=>v.rootPath===selected) ? selected : status.storage.usbRoot;
+        elements.usbRoot.dataset.signature = signature;
     }
     if (status.settings && document.activeElement !== elements.downloadFolder) {
         elements.downloadFolder.value = status.settings.downloadFolder;
         elements.organizeByGenre.checked = status.settings.organizeByGenre;
+        if (document.activeElement !== elements.fallbackToSd) elements.fallbackToSd.checked = status.settings.fallbackToSd;
     }
 }
 
@@ -166,6 +178,7 @@ elements.saveSettings.addEventListener("click", () => action(() => api("/v1/sett
     body: JSON.stringify({
         downloadFolder: elements.downloadFolder.value.trim(),
         organizeByGenre: elements.organizeByGenre.checked,
+        fallbackToSd: elements.fallbackToSd.checked,
     }),
 })));
 elements.signIn.addEventListener("click", () => action(() => api("/v1/auth/open", { method: "POST" })));

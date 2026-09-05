@@ -17,18 +17,19 @@
 
   <main>
     <section>
-      <h2>1. USB destination</h2>
+      <h2>1. Download destination</h2>
       <div class="row">
-        <input id="usbRoot" type="text" autocomplete="off" placeholder="/media/piflex/MUSIC_USB">
-        <button id="saveUsb">Use USB</button>
+        <select id="usbRoot" aria-label="Download destination"></select>
+        <button id="saveUsb">Use destination</button>
       </div>
+      <label><input id="fallbackToSd" type="checkbox" checked> Use SD card for new downloads if the selected USB is unavailable</label>
       <p id="storageStatus" class="muted">No USB selected.</p>
       <div class="row">
         <input id="downloadFolder" type="text" autocomplete="off" value="Music/EDMC" placeholder="Music/EDMC">
         <label><input id="organizeByGenre" type="checkbox" checked> Genre folders</label>
         <button id="saveSettings">Save folder</button>
       </div>
-      <p class="muted">The folder is relative to the selected USB. Existing downloads are not moved.</p>
+      <p class="muted">The folder is relative to the chosen destination. Existing files are not moved. To remove a USB safely, use Settings → System → Eject in BiteDJ (tap twice to confirm). Interrupted downloads must be retried.</p>
     </section>
 
     <section>

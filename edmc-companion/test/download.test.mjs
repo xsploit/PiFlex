@@ -6,10 +6,11 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 
-import { streamAudioDownload } from "../src/download.mjs";
+import { streamAudioDownload, inspectSupportedAudio } from "../src/download.mjs";
+import { audioFixture } from "./helpers/audio.mjs";
 
 test("MP3 download streams to a part file and reports its hash", async (context) => {
-    const payload = Buffer.concat([Buffer.from("ID3"), Buffer.alloc(128 * 1024, 0x5a)]);
+    const payload = await audioFixture("mp3");
     const server = http.createServer((request, response) => {
         response.writeHead(200, {
             "content-type": "audio/mpeg",
@@ -52,11 +53,12 @@ test("invalid media is rejected and its part file is removed", async (context) =
     await assert.rejects(fs.access(partPath), { code: "ENOENT" });
 });
 
-for (const [format, extension, payload] of [
-    ["flac", ".flac", Buffer.concat([Buffer.from("fLaC"), Buffer.alloc(128, 0x11)])],
-    ["wav", ".wav", Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WAVE"), Buffer.alloc(128, 0x22)])],
+for (const [format, extension] of [
+    ["flac", ".flac"],
+    ["wav", ".wav"],
 ]) {
     test(`${format.toUpperCase()} download is detected from its bytes`, async (context) => {
+        const payload = await audioFixture(format);
         const server = http.createServer((request, response) => response.end(payload));
         await listen(server);
         context.after(() => new Promise((resolve) => server.close(resolve)));
@@ -68,8 +70,78 @@ for (const [format, extension, payload] of [
         });
         assert.equal(result.format, format);
         assert.equal(result.extension, extension);
+        assert.equal(result.sampleRate, 44100);
+        assert.equal(result.channels, 2);
+        assert(result.duration > 0);
     });
 }
+
+test("signature-only files and AAC are never accepted as MP3/FLAC/WAV", async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-bad-audio-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    for (const bytes of [Buffer.from("ID3"), Buffer.from("fLaC"), Buffer.from("RIFF0000WAVE"),
+        Buffer.from([0xff, 0xf1, 0x50, 0x80, 0, 0xff, 0xfc]), await audioFixture("aac")]) {
+        const filename = path.join(dir, "bad.part");
+        await fs.writeFile(filename, bytes);
+        await assert.rejects(inspectSupportedAudio(filename), /audio|supported/);
+    }
+});
+
+test("idle timeout aborts the transfer and removes its partial file", async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-idle-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const server = http.createServer((req, res) => { res.writeHead(200); res.write("ID3"); });
+    await listen(server);
+    t.after(() => { server.closeAllConnections(); server.close(); });
+    const filename = path.join(dir, "stalled.part");
+    await assert.rejects(streamAudioDownload({ url: `http://127.0.0.1:${server.address().port}/`,
+        partPath: filename, idleTimeoutMs: 50 }), /abort|stalled/i);
+    await assert.rejects(fs.access(filename), { code: "ENOENT" });
+});
+
+test("truncated WAV payload fails even if some packets are still readable", async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-truncated-wav-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const payload = await audioFixture("wav");
+    const filename = path.join(dir, "cut.wav");
+    await fs.writeFile(filename, payload.subarray(0, Math.floor(payload.length / 2)));
+    await assert.rejects(inspectSupportedAudio(filename), /truncated/);
+});
+
+test("connection/header timeout stops a server that never sends headers", async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-no-headers-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const server = http.createServer(()=>{});
+    await listen(server);
+    t.after(() => { server.closeAllConnections(); server.close(); });
+    const filename = path.join(dir, "pending.part");
+    await assert.rejects(streamAudioDownload({ url:`http://127.0.0.1:${server.address().port}/`,
+        partPath:filename, connectTimeoutMs:50 }), /stalled/);
+    await assert.rejects(fs.access(filename), {code:"ENOENT"});
+});
+
+test("malformed audio is removed after transfer, not marked ready", async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-bad-stream-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    const server = http.createServer((req, res) => res.end("fLaC"));
+    await listen(server);
+    t.after(() => new Promise(resolve => server.close(resolve)));
+    const filename = path.join(dir, "bad.part");
+    await assert.rejects(streamAudioDownload({ url: `http://127.0.0.1:${server.address().port}/`, partPath: filename }), /audio/);
+    await assert.rejects(fs.access(filename), { code: "ENOENT" });
+});
+
+test("probe reads pinned Linux storage paths through an inherited descriptor", { skip: process.platform !== "linux" }, async t => {
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "edmc-probe-fd-"));
+    t.after(() => fs.rm(dir, { recursive: true, force: true }));
+    await fs.writeFile(path.join(dir, "track.wav"), await audioFixture("wav"));
+    const handle = await fs.open(dir, "r");
+    try {
+        const result = await inspectSupportedAudio(`/proc/self/fd/${handle.fd}/track.wav`);
+        assert.equal(result.format, "wav");
+        assert.equal(result.channels, 2);
+    } finally { await handle.close(); }
+});
 
 function listen(server) {
     return new Promise((resolve, reject) => {

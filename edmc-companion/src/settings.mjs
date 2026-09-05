@@ -1,6 +1,7 @@
 export const DEFAULT_SETTINGS = Object.freeze({
     downloadFolder: "Music/EDMC",
     organizeByGenre: true,
+    fallbackToSd: true,
 });
 
 export function normalizeDownloadFolder(value) {
@@ -26,12 +27,15 @@ export function normalizeSettings(value = {}, current = DEFAULT_SETTINGS) {
         throw new Error("settings must be an object");
     }
     const unknown = Object.keys(value).filter(
-        (key) => !["downloadFolder", "organizeByGenre"].includes(key),
+        (key) => !["downloadFolder", "organizeByGenre", "fallbackToSd"].includes(key),
     );
     if (unknown.length) {
         throw new Error(`Unknown setting: ${unknown[0]}`);
     }
     return {
+        fallbackToSd: value.fallbackToSd === undefined
+            ? (current.fallbackToSd ?? DEFAULT_SETTINGS.fallbackToSd)
+            : Boolean(value.fallbackToSd),
         downloadFolder: normalizeDownloadFolder(
             value.downloadFolder ?? current.downloadFolder ?? DEFAULT_SETTINGS.downloadFolder,
         ),

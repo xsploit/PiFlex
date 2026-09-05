@@ -27,6 +27,7 @@ async function route(companion, request, response) {
     }
 
     if (method === "GET" && url.pathname === "/v1/status") {
+        await companion.refreshStorage();
         return sendJson(response, 200, companion.status());
     }
     if (method === "GET" && url.pathname === "/v1/subscriptions") {
@@ -37,6 +38,12 @@ async function route(companion, request, response) {
     }
     if (method === "POST" && url.pathname === "/v1/storage") {
         return sendJson(response, 200, await companion.setStorage((await readBody(request)).path));
+    }
+    if (method === "POST" && url.pathname === "/v1/storage/prepare-eject") {
+        return sendJson(response, 200, await companion.prepareEject((await readBody(request)).path));
+    }
+    if (method === "POST" && url.pathname === "/v1/storage/cancel-eject") {
+        return sendJson(response, 200, await companion.cancelEject((await readBody(request)).path));
     }
     if (method === "GET" && url.pathname === "/v1/settings") {
         return sendJson(response, 200, companion.settings());

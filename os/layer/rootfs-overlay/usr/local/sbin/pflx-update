@@ -1,77 +1,196 @@
-#!/bin/sh
-set -eu
+#!/bin/bash
+# Run over SSH, not from a terminal owned by the kiosk session being stopped.
+set -Eeuo pipefail
+[[ $(id -u) == 0 ]] || { echo 'Run as root' >&2; exit 1; }
+exec 9>/run/lock/pflx-update.lock
+flock -n 9 || { echo 'Another update or rollback is running' >&2; exit 1; }
 
-bundle=${1:?usage: pflx-update /path/to/pflx-update.tar.gz}
-test -f "$bundle"
-test -f "$bundle.sha256"
+runtime=(
+    usr/local/bin/mixxx
+    usr/local/bin/pflx-bitedj-supervisor
+    usr/local/bin/start-pflx-edmc
+    usr/local/sbin/pflx-update
+    usr/local/sbin/pflx-rollback
+    usr/local/sbin/pflx-usb-mount
+)
+trees=(usr/local/share/mixxx opt/pflx/edmc-companion)
+stage=""
+backup=""
+changed=0
+stopped=0
+session_active=0
+edmc_active=0
 
+atomic_file() {
+    local source=$1 target=$2 temp
+    temp=$(mktemp "$(dirname "$target")/.pflx-file.XXXXXX") || return
+    install -m 0755 "$source" "$temp" && mv -f "$temp" "$target"
+}
+
+validate_backup() {
+    [[ -f "$backup/complete" && $(cat "$backup/complete") == pflx-backup-v2 ]] || return 1
+    [[ -f "$backup/usr/local/bin/mixxx" ]] || return 1
+    for relative in "${trees[@]}"; do [[ -d "$backup/$relative" ]] || return 1; done
+}
+
+restore_backup() {
+    validate_backup || return 1
+    for relative in "${runtime[@]}"; do
+        if [[ -f "$backup/$relative" ]]; then
+            atomic_file "$backup/$relative" "/$relative" || return 1
+        else
+            # Only these exact allowlisted runtime files can be newly installed.
+            rm -f "/$relative" || return 1
+        fi
+    done
+    for relative in "${trees[@]}"; do
+        rsync -a --delete "$backup/$relative/" "/$relative/" || return 1
+    done
+    if [[ -f "$backup/legacy-home" ]]; then
+        local previous_home
+        previous_home=$(cat "$backup/legacy-home")
+        case "$previous_home" in /home/*) ;; *) return 1 ;; esac
+        if [[ -d "$backup/legacy-skin" ]]; then
+            rsync -a "$backup/legacy-skin/" "$previous_home/.mixxx/skins/BiteDJ/" || return 1
+        fi
+    fi
+    sync
+}
+
+restart_services() {
+    if (( session_active )); then systemctl start pflx-session.service || return 1; fi
+    if (( edmc_active )); then systemctl start pflx-edmc.service || return 1; fi
+}
+
+cleanup() {
+    local status=$?
+    trap - EXIT
+    set +e
+    if (( status != 0 && changed )); then
+        echo "Installation failed; restoring verified backup $backup" >&2
+        systemctl stop pflx-edmc.service pflx-session.service
+        if restore_backup; then
+            changed=0
+        else
+            echo "RESTORE FAILED. Services remain stopped. Preserve $backup for recovery." >&2
+            stopped=0
+        fi
+    fi
+    if (( stopped )); then restart_services || status=1; fi
+    if [[ -n "$stage" ]]; then rm -rf -- "$stage"; fi
+    exit "$status"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+for command in tar rsync diff node sync systemctl; do command -v "$command" >/dev/null; done
+systemctl is-active --quiet pflx-session.service && session_active=1
+systemctl is-active --quiet pflx-edmc.service && edmc_active=1
+
+if [[ ${1:-} == --rollback ]]; then
+    backup=$(readlink -f "${2:-/var/backups/pflx/latest}")
+    case "$backup" in /var/backups/pflx/*) ;; *) echo 'Invalid backup path' >&2; exit 1 ;; esac
+    validate_backup || { echo 'Backup is incomplete or uses the legacy unverified format' >&2; exit 1; }
+    stopped=1
+    systemctl stop pflx-edmc.service pflx-session.service
+    # On restore failure, do not restart a potentially mixed installation.
+    if ! restore_backup; then stopped=0; echo "Rollback failed; preserve $backup" >&2; exit 1; fi
+    restart_services
+    stopped=0
+    echo "Restored $backup"
+    exit 0
+fi
+
+bundle=${1:?usage: pflx-update bundle.tar.gz | --rollback [backup]}
+[[ -f "$bundle" && -f "$bundle.sha256" ]]
 expected=$(awk 'NR == 1 { print $1 }' "$bundle.sha256")
 actual=$(sha256sum "$bundle" | awk '{ print $1 }')
-test "$expected" = "$actual"
-
+[[ "$expected" == "$actual" ]] || { echo 'Bundle checksum mismatch' >&2; exit 1; }
 stage=$(mktemp -d /var/tmp/pflx-update.XXXXXX)
-trap 'rm -rf "$stage"' EXIT INT TERM
 
-tar -tzf "$bundle" | while IFS= read -r path; do
-    case "$path" in
-        payload/|payload/usr/|payload/usr/local/|payload/usr/local/share/|payload/opt/|payload/opt/pflx/) ;;
-        payload/usr/local/bin/*|payload/usr/local/share/mixxx/*|payload/opt/pflx/edmc-companion/*|manifest.txt) ;;
-        *) printf 'Refusing unexpected update path: %s\n' "$path" >&2; exit 1 ;;
+# Reject links/special entries before extraction, including tar hard links.
+tar -tvzf "$bundle" >"$stage/types"
+while IFS= read -r entry; do
+    case "$entry" in -*|d*) ;; *) echo 'Bundle contains a link or special file' >&2; exit 1 ;; esac
+done <"$stage/types"
+tar -tzf "$bundle" >"$stage/paths"
+while IFS= read -r entry; do
+    case "$entry" in
+        manifest.txt|payload/|payload/usr/|payload/usr/local/|payload/usr/local/bin/|payload/usr/local/sbin/|payload/usr/local/share/|payload/opt/|payload/opt/pflx/) ;;
+        payload/usr/local/bin/mixxx|payload/usr/local/bin/pflx-bitedj-supervisor|payload/usr/local/bin/start-pflx-edmc|payload/usr/local/sbin/pflx-update|payload/usr/local/sbin/pflx-rollback|payload/usr/local/sbin/pflx-usb-mount) ;;
+        payload/usr/local/share/mixxx/*|payload/opt/pflx/edmc-companion/*) ;;
+        *) echo "Unexpected bundle path: $entry" >&2; exit 1 ;;
     esac
-    case "/$path/" in */../*|*/./*) printf 'Refusing unsafe update path: %s\n' "$path" >&2; exit 1 ;; esac
-done
-
+    case "/$entry/" in */../*|*/./*) echo 'Unsafe archive path' >&2; exit 1 ;; esac
+done <"$stage/paths"
 tar -xzf "$bundle" -C "$stage" --no-same-owner --no-same-permissions
-if find "$stage" -type l -print -quit | grep -q .; then
-    echo 'Refusing an update bundle containing symbolic links' >&2
-    exit 1
+[[ -s "$stage/manifest.txt" ]]
+grep -qx 'runtime=pflx-v2' "$stage/manifest.txt"
+for relative in "${runtime[@]}"; do [[ -s "$stage/payload/$relative" ]]; done
+for relative in "${trees[@]}"; do [[ -d "$stage/payload/$relative" && -d "/$relative" ]]; done
+[[ -s "$stage/payload/opt/pflx/edmc-companion/package.json" ]]
+if [[ -f "$stage/payload/opt/pflx/edmc-companion/src/audio-probe.mjs" ]]; then
+    command -v ffprobe >/dev/null || {
+        echo 'This EDMC update requires ffprobe. Install the ffmpeg package before retrying; nothing has been changed.' >&2
+        exit 1
+    }
 fi
-test -f "$stage/manifest.txt"
-# Archives assembled on Windows do not retain Unix executable mode bits.
-# The install step below always applies mode 0755 after verification.
-test -f "$stage/payload/usr/local/bin/mixxx"
+[[ -d "$stage/payload/opt/pflx/edmc-companion/node_modules/playwright-core" ]]
+while IFS= read -r -d '' module; do node --check "$module"; done < <(find "$stage/payload/opt/pflx/edmc-companion/src" -name '*.mjs' -print0)
+[[ -s "$stage/payload/opt/pflx/edmc-companion/src/main.mjs" ]]
+bash -n "$stage/payload/usr/local/sbin/pflx-update"
+bash -n "$stage/payload/usr/local/sbin/pflx-rollback"
+sh -n "$stage/payload/usr/local/bin/pflx-bitedj-supervisor"
+sh -n "$stage/payload/usr/local/bin/start-pflx-edmc"
+sh -n "$stage/payload/usr/local/sbin/pflx-usb-mount"
 
-stamp=$(date -u +%Y%m%dT%H%M%SZ)
-backup="/var/backups/pflx/$stamp"
-install -d "$backup/usr/local" "$backup/opt/pflx"
-cp -a /usr/local/bin "$backup/usr/local/" 2>/dev/null || true
-cp -a /usr/local/share "$backup/usr/local/" 2>/dev/null || true
-cp -a /opt/pflx/edmc-companion "$backup/opt/pflx/" 2>/dev/null || true
+session_user=$(systemctl show pflx-session.service --property=User --value)
+case "$session_user" in ''|root|*[!A-Za-z0-9_-]*) echo 'Invalid session user' >&2; exit 1 ;; esac
+session_home=$(getent passwd "$session_user" | cut -d: -f6)
+case "$session_home" in /home/*) ;; *) echo 'Invalid session home' >&2; exit 1 ;; esac
+# Overlay templates are also shipped by application updates, not just image builds.
+sed -i "s/@PIFLEX_USER@/$session_user/g" "$stage/payload/usr/local/sbin/pflx-usb-mount"
+legacy_skin="$session_home/.mixxx/skins/BiteDJ"
+
+# A copy error is fatal. Never publish latest or mutate live files on failure.
+install -d /var/backups/pflx
+backup=$(mktemp -d /var/backups/pflx/backup-XXXXXXXX)
+for relative in "${runtime[@]}"; do
+    install -d "$backup/$(dirname "$relative")"
+    if [[ -f "/$relative" ]]; then
+        cp -a "/$relative" "$backup/$relative"
+        cmp "/$relative" "$backup/$relative"
+    fi
+done
+for relative in "${trees[@]}"; do
+    install -d "$backup/$(dirname "$relative")"
+    cp -a "/$relative" "$backup/$relative"
+    diff -qr "/$relative" "$backup/$relative"
+done
+if [[ -d "$legacy_skin" && ! -L "$legacy_skin" ]]; then
+    cp -a "$legacy_skin" "$backup/legacy-skin"
+    diff -qr "$legacy_skin" "$backup/legacy-skin"
+    printf '%s\n' "$session_home" >"$backup/legacy-home"
+fi
+sync
+printf '%s\n' pflx-backup-v2 >"$backup/complete"
+sync
 ln -sfn "$backup" /var/backups/pflx/latest
 
-install -m 0755 "$stage/payload/usr/local/bin/mixxx" /usr/local/bin/mixxx
-rsync -a --delete "$stage/payload/usr/local/share/mixxx/" /usr/local/share/mixxx/
-rsync -a --delete "$stage/payload/opt/pflx/edmc-companion/" /opt/pflx/edmc-companion/
+stopped=1
+systemctl stop pflx-edmc.service pflx-session.service
+changed=1
+for relative in "${runtime[@]}"; do atomic_file "$stage/payload/$relative" "/$relative"; done
+for relative in "${trees[@]}"; do rsync -a --delete "$stage/payload/$relative/" "/$relative/"; done
 chown -R root:root /opt/pflx/edmc-companion
 find /opt/pflx/edmc-companion -type d -exec chmod 0755 {} +
 find /opt/pflx/edmc-companion -type f -exec chmod 0644 {} +
-find /opt/pflx/edmc-companion/node_modules/.bin -type f -exec chmod 0755 {} + 2>/dev/null || true
-
-# A user-level skin has priority over the copy shipped in resource-path. Early
-# PiFlex images installed BiteDJ under ~/.mixxx/skins, which silently pinned
-# the interface to that old version after later updates replaced the system
-# skin. Retire only that exact legacy override and keep it in the update backup.
-session_user=$(systemctl show pflx-session.service --property=User --value)
-case "$session_user" in
-    ''|root|*[!A-Za-z0-9_-]*)
-        echo 'Unable to identify the PiFlex session user safely' >&2
-        exit 1
-        ;;
-esac
-session_home=$(getent passwd "$session_user" | cut -d: -f6)
-case "$session_home" in
-    /home/*) ;;
-    *)
-        echo 'Refusing unexpected PiFlex session home' >&2
-        exit 1
-        ;;
-esac
-legacy_skin="$session_home/.mixxx/skins/BiteDJ"
-if [ -d "$legacy_skin" ] && [ ! -L "$legacy_skin" ]; then
-    install -d "$backup/home/$session_user/.mixxx/skins"
-    mv "$legacy_skin" "$backup/home/$session_user/.mixxx/skins/BiteDJ-user-override"
+if [[ -d "$backup/legacy-skin" ]]; then
+    mv "$legacy_skin" "$backup/legacy-skin-retired"
 fi
-
-systemctl restart pflx-edmc.service
-pkill -TERM -x mixxx 2>/dev/null || true
-printf 'Installed PFLX update %s; backup is %s\n' "$(cat "$stage/manifest.txt")" "$backup"
+sync
+restart_services
+stopped=0
+changed=0
+echo "Installed verified bundle; rollback: $backup"

@@ -3,22 +3,30 @@ import path from "node:path";
 
 import { BrowserSession } from "./browser-session.mjs";
 import { APP_VERSION, API_VERSION } from "./config.mjs";
-import { streamAudioDownload } from "./download.mjs";
+import { streamAudioDownload, inspectSupportedAudio } from "./download.mjs";
+import { ensureAudioProbe } from "./audio-probe.mjs";
 import { JobQueue } from "./job-queue.mjs";
 import { normalizeSettings } from "./settings.mjs";
 import { StateStore } from "./state-store.mjs";
 import { UsbLibrary } from "./usb-library.mjs";
-import { assertProviderId, readPreview, resolveOfficialDownload } from "./providers/beatexs.mjs";
+import { Storage } from "./storage.mjs";
+import { assertProviderId, readFileMetadata, resolveOfficialDownload } from "./providers/beatexs.mjs";
 import { assertEdmcGenreUrl, readGenreListing, readGenrePage, readMusicCatalog, readMusicSearch, readRelease } from "./providers/edmc.mjs";
 
 const AUTH_PROBE_URL = "https://edmc.to/genre/jump-up-145/";
 
 export class Companion {
-    constructor({ dataDir, chromiumExecutable, usbRoot = null, origin }) {
+    constructor({ dataDir, chromiumExecutable, usbRoot = null, origin, storageOptions }) {
         this.dataDir = dataDir;
         this.origin = origin;
         this.stateStore = new StateStore(dataDir);
         this.usbLibrary = new UsbLibrary(usbRoot);
+        this.storage = new Storage(dataDir, storageOptions);
+        this.initialRoot = usbRoot;
+        this.activeVolume = null;
+        this.storageMessage = "";
+        this.storageBusy = false;
+        this.activeDownload = null;
         this.browser = new BrowserSession({
             executablePath: chromiumExecutable,
             profileDirectory: path.join(dataDir, "chromium-profile"),
@@ -28,14 +36,23 @@ export class Companion {
 
     async initialize() {
         const state = await this.stateStore.load();
-        this.usbLibrary.setSettings(state.settings);
-        if (this.usbLibrary.rootPath) {
-            await this.setStorage(this.usbLibrary.rootPath);
-        } else if (state.usbRoot) {
-            this.usbLibrary.setRoot(state.usbRoot);
-            await this.usbLibrary.verifyWritable();
-            await this.reconcileStorage();
+        if (state.providerSchemaVersion !== 2) {
+            // Re-resolve stale labels once; keep all downloaded-track metadata.
+            await this.stateStore.update((s) => {
+                for (const release of s.releases) {
+                    release.providers = [];
+                    delete release.resolvedAt;
+                }
+                s.catalog = [];
+                s.providerSchemaVersion = 2;
+            });
         }
+        this.usbLibrary.setSettings(state.settings);
+        // A missing remembered drive must not prevent the HTTP server starting.
+        if (this.initialRoot) {
+            await this.stateStore.update((s) => { s.usbRoot = this.initialRoot; s.storageId = null; });
+        }
+        await this.refreshStorage();
     }
 
     status() {
@@ -44,8 +61,16 @@ export class Companion {
             apiVersion: API_VERSION,
             auth: this.stateStore.value.auth,
             storage: {
-                usbRoot: this.stateStore.value.usbRoot,
-                selected: Boolean(this.stateStore.value.usbRoot),
+                usbRoot: this.activeVolume?.rootPath || null,
+                selected: Boolean(this.activeVolume),
+                requestedRoot: this.stateStore.value.usbRoot,
+                kind: this.activeVolume?.kind || null,
+                id: this.activeVolume?.id || null,
+                message: this.storageMessage,
+                state: !this.activeVolume ? "unavailable" :
+                    (this.activeVolume.kind === "sd" && this.stateStore.value.usbRoot &&
+                        this.stateStore.value.usbRoot !== this.storage.localRoot ? "fallback" : "ready"),
+                volumes: this.storageVolumes || [],
             },
             settings: this.settings(),
             browser: this.browser.status(),
@@ -91,33 +116,107 @@ export class Companion {
     }
 
     async setStorage(rootPath) {
-        this.usbLibrary.setRoot(rootPath);
-        const verifiedRoot = await this.usbLibrary.verifyWritable();
-        await this.stateStore.update((state) => {
-            state.usbRoot = verifiedRoot;
-        });
-        await this.reconcileStorage();
-        return { usbRoot: verifiedRoot };
+        if (this.storageBusy || this.jobs.list().some((j) => j.kind === "download" && ["queued", "running"].includes(j.state))) {
+            throw new Error("Finish or cancel downloads before changing the destination");
+        }
+        this.storageBusy = true;
+        let session;
+        try {
+            const volume = await this.storage.resolve(rootPath === "sd" ? this.storage.localRoot : rootPath);
+            session = await this.storage.open(volume, this.settings());
+            const result = await session.library.reconcile();
+            const volumes = await this.storage.volumes();
+            await session.check();
+            await this.stateStore.update((state) => {
+                state.usbRoot = volume.rootPath;
+                state.storageId = volume.id;
+                this.applyStorageEntries(state, result.tracks, volume);
+            });
+            this.activeVolume = volume;
+            this.usbLibrary = new UsbLibrary(volume.rootPath, this.settings());
+            this.storageMessage = "";
+            this.storageVolumes = volumes;
+            return { usbRoot: volume.rootPath, kind: volume.kind };
+        } finally {
+            try { await session?.close(); }
+            finally { this.storageBusy = false; }
+        }
+    }
+
+    applyStorageEntries(state, tracks, volume) {
+        for (const release of state.releases) {
+            const entry = tracks.find((t) => (release.providers || []).some((p) => p.providerId === t.providerId) ||
+                (t.topicId && t.topicId === release.topicId));
+            if (entry) release.download = { ...entry, storageRoot: volume.rootPath, storageId: volume.id };
+            // Selecting B must not erase a download still stored on A. Keep
+            // its provenance; clients check that volume before loading it.
+            else if (!release.download?.storageId || release.download.storageId === volume.id) {
+                delete release.download;
+            }
+        }
+    }
+
+    async refreshStorage() {
+        if (this.storageBusy || this.activeDownload) return;
+        this.storageBusy = true;
+        let session;
+        try {
+            this.storageVolumes = await this.storage.volumes();
+            const state = this.stateStore.value;
+            let volume;
+            try {
+                volume = await this.storage.resolve(state.usbRoot || this.storage.localRoot, state.storageId);
+                this.storageMessage = "";
+            } catch (error) {
+                this.storageMessage = error.message;
+                if (state.settings.fallbackToSd) {
+                    volume = await this.storage.resolve(this.storage.localRoot);
+                    this.storageMessage += "; using SD card for new downloads";
+                }
+            }
+            if (!volume) { this.activeVolume = null; return; }
+            if (this.activeVolume?.instance === volume.instance && this.activeVolume?.rootPath === volume.rootPath) return;
+            session = await this.storage.open(volume, this.settings());
+            const entries = state.releases.map((r) => r.download).filter((t) => t &&
+                (t.storageId ? t.storageId === volume.id : state.usbRoot === volume.rootPath));
+            const result = await session.library.reconcile(entries);
+            await this.stateStore.update((s) => this.applyStorageEntries(s, result.tracks, volume));
+            this.activeVolume = volume;
+            this.usbLibrary = new UsbLibrary(volume.rootPath, this.settings());
+        } catch (error) {
+            this.activeVolume = null;
+            this.storageMessage = error.message;
+        } finally {
+            try { await session?.close(); }
+            finally { this.storageBusy = false; }
+        }
     }
 
     async reconcileStorage() {
-        const result = await this.usbLibrary.reconcile(
-            this.stateStore.value.releases.map((release) => release.download).filter(Boolean),
-        );
-        const validProviders = new Set(result.tracks.map((track) => track.providerId));
-        const staleDownloads = this.stateStore.value.releases.filter(
-            (release) => release.download && !validProviders.has(release.download.providerId),
-        );
-        if (staleDownloads.length > 0) {
-            await this.stateStore.update((state) => {
-                for (const release of state.releases) {
-                    if (release.download && !validProviders.has(release.download.providerId)) {
-                        delete release.download;
-                    }
-                }
-            });
+        this.activeVolume = null;
+        await this.refreshStorage();
+    }
+
+    async prepareEject(rootPath) {
+        if (this.storageBusy) throw new Error("Storage operation in progress; retry eject");
+        const volume = (await this.storage.volumes()).find((v) => v.rootPath === rootPath && v.kind === "usb");
+        if (!volume) return { ready: true };
+        this.storage.blocked.add(volume.instance);
+        const running = this.activeDownload;
+        if (running?.volume.instance === volume.instance) {
+            this.jobs.cancel(running.id);
+            await running.done;
         }
-        return result;
+        await this.refreshStorage();
+        return { ready: true };
+    }
+
+    async cancelEject(rootPath) {
+        for (const volume of await this.storage.volumes()) {
+            if (volume.rootPath === rootPath) this.storage.blocked.delete(volume.instance);
+        }
+        await this.refreshStorage();
+        return { ready: true };
     }
 
     async setSubscriptions(subscriptions) {
@@ -380,22 +479,20 @@ export class Companion {
     enqueueResolve(topicId) {
         return this.jobs.enqueue("resolve", { topicId }, async ({ update }) => {
             const release = this.findRelease(topicId);
+            if (release.providers.length && Date.now() - Date.parse(release.resolvedAt) < 15 * 60_000) {
+                return { topicId: release.topicId, providers: release.providers, cached: true };
+            }
             update(0.1, `Resolving ${release.title}`);
             const page = await this.browser.page();
             try {
                 const details = await readRelease(page, release.url);
+                if (!details.providers.length) throw new Error("No supported BeatEXS file options found; check the release or EDMC login");
                 const providers = [];
                 for (let index = 0; index < details.providers.length; index += 1) {
                     const providerDetails = details.providers[index];
                     const { providerId } = providerDetails;
                     update(0.25 + (index / Math.max(details.providers.length, 1)) * 0.65, `Reading provider ${index + 1}`);
-                    providers.push({
-                        provider: "BeatEXS",
-                        providerId,
-                        label: providerDetails.label,
-                        hintedFormat: providerDetails.hintedFormat,
-                        previewUrl: await readPreview(page, providerId),
-                    });
+                    providers.push(await this.describeProvider(page, providerDetails));
                 }
                 await this.stateStore.update((state) => {
                     const stateRelease = state.releases.find((entry) => entry.topicId === release.topicId);
@@ -411,86 +508,133 @@ export class Companion {
     }
 
     enqueueDownload(topicId, requestedProviderId = null) {
+        if (this.storageBusy) throw new Error("Storage is changing; retry the download");
         return this.jobs.enqueue("download", { topicId, providerId: requestedProviderId }, async (job) => {
-            let release = this.findRelease(topicId);
-            if (release.providers.length === 0) {
-                job.update(0.05, "Resolving providers");
-                await this.resolveReleaseInline(release, job);
-                release = this.findRelease(topicId);
-            }
-            const provider = requestedProviderId
-                ? release.providers.find((entry) => entry.providerId === requestedProviderId)
-                : release.providers[0];
-            if (!provider) {
-                throw new Error("No supported provider was found for this release");
-            }
-            assertProviderId(provider.providerId);
-
-            const duplicate = await this.usbLibrary.findByProviderId(provider.providerId);
-            if (duplicate) {
-                return { duplicate: true, track: duplicate };
-            }
-
-            job.update(0.2, "Requesting the authorized download");
-            const page = await this.browser.page();
-            let resolvedUrl;
-            let cookies;
+            await this.refreshStorage();
+            if (this.storageBusy || !this.activeVolume) throw new Error(this.storageMessage || "No destination available");
+            this.storageBusy = true;
+            let session;
+            let resolveDone;
             try {
-                resolvedUrl = await resolveOfficialDownload(page, provider.providerId);
-                cookies = await page.context().cookies(resolvedUrl);
+                session = await this.storage.open(this.activeVolume, this.settings());
+                const library = session.library;
+                const volume = session.volume;
+                this.activeDownload = { id: job.id, volume, done: new Promise((resolve) => { resolveDone = resolve; }) };
+                this.storageBusy = false;
+                let release = this.findRelease(topicId);
+                if (release.providers.length === 0) {
+                    job.update(0.05, "Resolving providers");
+                    await this.resolveReleaseInline(release, job);
+                    release = this.findRelease(topicId);
+                }
+                const provider = requestedProviderId
+                    ? release.providers.find((entry) => entry.providerId === requestedProviderId)
+                    : release.providers[0];
+                if (!provider) {
+                    throw new Error("No supported provider was found for this release");
+                }
+                if (provider.hintedFormat && !["mp3", "flac", "wav"].includes(provider.hintedFormat)) {
+                    throw new Error(`Unsupported file type ${provider.hintedFormat.toUpperCase()}; choose MP3, FLAC, or WAV`);
+                }
+                assertProviderId(provider.providerId);
+
+                // Validate the on-drive index before trusting a duplicate entry.
+                const reconciled = await library.reconcile();
+                const duplicate = reconciled.tracks.find((t) => t.providerId === provider.providerId);
+                if (duplicate) {
+                    await inspectSupportedAudio(path.join(library.rootPath, duplicate.relativePath), { signal: job.signal });
+                    const track = { ...duplicate, storageRoot: volume.rootPath, storageId: volume.id };
+                    await this.stateStore.update((state) => {
+                        const target = state.releases.find((r) => r.topicId === release.topicId);
+                        if (target) target.download = track;
+                    });
+                    return { duplicate: true, track };
+                }
+
+                job.update(0.2, "Requesting the authorized download");
+                await ensureAudioProbe();
+                const page = await this.browser.page();
+                let resolvedUrl;
+                let cookies;
+                try {
+                    resolvedUrl = await resolveOfficialDownload(page, provider.providerId);
+                    cookies = await page.context().cookies(resolvedUrl);
+                } finally {
+                    await page.close().catch(() => undefined);
+                    await this.closeHeadlessBrowser();
+                }
+
+                job.signal.throwIfAborted();
+                await session.check(0);
+                const paths = await library.allocateDownload(release, provider.providerId, job.id);
+                job.update(0.3, `Streaming to ${volume.kind === "sd" ? "SD card" : volume.label || "selected USB"}`);
+                const downloaded = await streamAudioDownload({
+                    url: resolvedUrl,
+                    partPath: paths.partPath,
+                    cookies,
+                    signal: job.signal,
+                    checkStorage: session.check,
+                    onProgress: (bytes, expectedBytes) => {
+                        const fraction = expectedBytes ? bytes / expectedBytes : Math.min(bytes / 20_000_000, 0.95);
+                        job.update(0.3 + Math.min(fraction, 1) * 0.55, `${Math.round(bytes / 1_048_576)} MB downloaded`);
+                    },
+                });
+
+                job.signal.throwIfAborted();
+                await session.check();
+                const finalPath = await library.allocateFinalPath(paths, downloaded.extension);
+                await library.finalizeDownload(
+                    paths.partPath,
+                    finalPath,
+                    downloaded.bytes,
+                );
+                const entry = {
+                    id: `beatexs:${provider.providerId}`,
+                    title: release.title,
+                    topicId: release.topicId,
+                    sourceUrl: release.url,
+                    provider: "BeatEXS",
+                    providerId: provider.providerId,
+                    subscriptionId: release.subscriptionId,
+                    subscriptionName: release.subscriptionName,
+                    relativePath: library.relativePath(finalPath),
+                    storageRoot: volume.rootPath,
+                    storageId: volume.id,
+                    format: downloaded.format,
+                    codec: downloaded.codec,
+                    duration: downloaded.duration,
+                    sampleRate: downloaded.sampleRate,
+                    channels: downloaded.channels,
+                    bitrate: downloaded.bitrate,
+                    sourceLabel: provider.label || null,
+                    bytes: downloaded.bytes,
+                    sha256: downloaded.sha256,
+                    audioValidationVersion: 1,
+                    downloadedAt: new Date().toISOString(),
+                };
+
+                try {
+                    await session.check();
+                    await library.commitTrack(entry);
+                } catch (error) {
+                    await fs.rename(finalPath, paths.partPath).catch(() => undefined);
+                    throw error;
+                }
+                await this.stateStore.update((state) => {
+                    const stateRelease = state.releases.find((candidate) => candidate.topicId === release.topicId);
+                    if (stateRelease) stateRelease.download = entry;
+                });
+                job.update(1, "Ready to load in BiteDJ");
+                return { duplicate: false, track: entry };
             } finally {
-                await page.close().catch(() => undefined);
-                await this.closeHeadlessBrowser();
+                try {
+                    await session?.close();
+                } finally {
+                    this.activeDownload = null;
+                    this.storageBusy = false;
+                    resolveDone?.();
+                }
             }
-
-            const paths = await this.usbLibrary.allocateDownload(release, provider.providerId, job.id);
-            job.update(0.3, "Streaming to the selected USB");
-            const downloaded = await streamAudioDownload({
-                url: resolvedUrl,
-                partPath: paths.partPath,
-                cookies,
-                signal: job.signal,
-                onProgress: (bytes, expectedBytes) => {
-                    const fraction = expectedBytes ? bytes / expectedBytes : Math.min(bytes / 20_000_000, 0.95);
-                    job.update(0.3 + Math.min(fraction, 1) * 0.55, `${Math.round(bytes / 1_048_576)} MB downloaded`);
-                },
-            });
-
-            const finalPath = await this.usbLibrary.allocateFinalPath(paths, downloaded.extension);
-            await this.usbLibrary.finalizeDownload(
-                paths.partPath,
-                finalPath,
-                downloaded.bytes,
-            );
-            const entry = {
-                id: `beatexs:${provider.providerId}`,
-                title: release.title,
-                topicId: release.topicId,
-                sourceUrl: release.url,
-                provider: "BeatEXS",
-                providerId: provider.providerId,
-                subscriptionId: release.subscriptionId,
-                subscriptionName: release.subscriptionName,
-                relativePath: this.usbLibrary.relativePath(finalPath),
-                format: downloaded.format,
-                sourceLabel: provider.label || null,
-                bytes: downloaded.bytes,
-                sha256: downloaded.sha256,
-                downloadedAt: new Date().toISOString(),
-            };
-
-            try {
-                await this.usbLibrary.commitTrack(entry);
-            } catch (error) {
-                await fs.rename(finalPath, paths.partPath).catch(() => undefined);
-                throw error;
-            }
-            await this.stateStore.update((state) => {
-                const stateRelease = state.releases.find((candidate) => candidate.topicId === release.topicId);
-                stateRelease.download = entry;
-            });
-            job.update(1, "Ready in BiteDJ's removable-device browser");
-            return { duplicate: false, track: entry };
         });
     }
 
@@ -507,16 +651,12 @@ export class Companion {
         const page = await this.browser.page();
         try {
             const details = await readRelease(page, release.url);
+            if (!details.providers.length) throw new Error("No supported BeatEXS file options found; check the release or EDMC login");
             const providers = [];
             for (const providerDetails of details.providers) {
                 const { providerId } = providerDetails;
-                providers.push({
-                    provider: "BeatEXS",
-                    providerId,
-                    label: providerDetails.label,
-                    hintedFormat: providerDetails.hintedFormat,
-                    previewUrl: await readPreview(page, providerId),
-                });
+                job.signal.throwIfAborted();
+                providers.push(await this.describeProvider(page, providerDetails));
             }
             await this.stateStore.update((state) => {
                 const stateRelease = state.releases.find((entry) => entry.topicId === release.topicId);
@@ -530,6 +670,28 @@ export class Companion {
             await this.closeHeadlessBrowser();
         }
         job.update(0.15, "Provider resolved");
+    }
+
+    async describeProvider(page, details) {
+        const provider = { provider: "BeatEXS", ...details };
+        // Formats already labelled in the post require no preview navigation.
+        // BiteDJ previews the downloaded file; preview URLs are not needed here.
+        if (provider.hintedFormat) return provider;
+        try {
+            const metadata = await readFileMetadata(page, provider.providerId);
+            provider.hintedFormat = metadata.hintedFormat;
+            provider.filename = metadata.filename;
+            provider.sizeLabel = metadata.sizeLabel;
+            provider.label = metadata.hintedFormat ?
+                `${metadata.hintedFormat.toUpperCase()}${metadata.sizeLabel ? ` · ${metadata.sizeLabel}` : ""}` :
+                "Unknown format (verified on download)";
+        } catch {
+            // A preview/metadata endpoint outage must not disable an otherwise
+            // valid official download. Never invent its type from an MP3 preview.
+            provider.label = "Unknown format (verified on download)";
+            provider.metadataUnavailable = true;
+        }
+        return provider;
     }
 
     async closeHeadlessBrowser() {

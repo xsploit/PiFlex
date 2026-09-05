@@ -30,6 +30,7 @@ mmdebstrap:
     - e2fsprogs
     - evtest
     - exfatprogs
+    - ffmpeg
     - foot
     - jq
     - libgl1-mesa-dri

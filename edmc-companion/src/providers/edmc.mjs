@@ -3,25 +3,32 @@ const EDMC_ORIGIN = "https://edmc.to";
 export async function readMusicCatalog(page) {
     await page.goto(`${EDMC_ORIGIN}/`, { waitUntil: "domcontentloaded" });
     return page.evaluate(() => {
-        const menu = document.querySelector("#elNavigation_40_menu");
-        if (!menu) {
+        // The legacy IPS menu is still in the DOM, but misses newer genres.
+        // Prefer the current header's grouped genre navigation; legacy is an
+        // explicit compatibility path only when the new structure is absent.
+        const current = [...document.querySelectorAll('#ipsLayout_header li[aria-haspopup="true"]')]
+            .filter((item) => item.querySelector(':scope > div a[href*="/genre/"]'));
+        const legacy = document.querySelector("#elNavigation_40_menu");
+        const categories = current.length ? current :
+            [...(legacy?.querySelectorAll(":scope > li.ipsMenu_subItems") || [])];
+        if (!categories.length) {
             throw new Error("EDMC music menu was not found");
         }
-        return [...menu.querySelectorAll(":scope > li.ipsMenu_subItems")]
+        return categories
             .map((category) => {
                 const categoryLink = category.querySelector(":scope > a");
-                const nestedMenu = category.querySelector(":scope > ul");
+                const nestedMenu = category.querySelector(":scope > div, :scope > ul");
                 const genres = nestedMenu
-                    ? [...nestedMenu.querySelectorAll(":scope > li.ipsMenu_item > a[href]")]
+                    ? [...nestedMenu.querySelectorAll('a[href*="/genre/"]')]
                         .map((link) => ({
                             name: (link.textContent || "").replace(/\s+/g, " ").trim(),
                             url: new URL(link.getAttribute("href"), location.href).href,
                         }))
-                        .filter((genre) => genre.name && /^https:\/\/edmc\.to\/genre\//.test(genre.url))
+                        .filter((genre) => genre.name && /^https:\/\/edmc\.to\/genre\/[^/]+-\d+\/$/.test(genre.url))
                     : [];
                 return {
                     name: (categoryLink?.textContent || "").replace(/\s+/g, " ").trim(),
-                    genres: [...new Map(genres.map((genre) => [genre.url, genre])).values()],
+                    genres: [...new Map(genres.map((genre) => [genre.url.match(/-(\d+)\/$/)[1], genre])).values()],
                 };
             })
             .filter((category) => category.name && category.genres.length);
@@ -67,7 +74,7 @@ export async function readGenreListing(page, genreUrl, pageNumber = 1) {
         const lastPage = lastHref ? Number(new URL(lastHref).searchParams.get("page") || 1) : 1;
         const currentPage = Number(new URL(location.href).searchParams.get("page") || 1);
         return {
-            name: document.querySelector("h1")?.textContent?.replace(/\s+/g, " ").trim() || document.title,
+            name: document.querySelector("h1.ipsType_pageTitle, #ipsLayout_mainArea h1")?.textContent?.replace(/\s+/g, " ").trim() || document.title,
             url: canonical,
             page: currentPage,
             lastPage: Number.isFinite(lastPage) && lastPage > 0 ? lastPage : currentPage,
@@ -140,25 +147,26 @@ export async function readRelease(page, releaseUrl) {
         const providers = [...document.querySelectorAll('iframe[src^="https://beatexs.com/embed/"]')]
             .map((frame, index) => {
                 const providerId = frame.src.match(/\/embed\/([^/?#]+)/)?.[1] || null;
-                const paragraph = frame.closest("p");
+                const paragraph = frame.closest("p") || frame.parentElement;
                 const ownText = (paragraph?.textContent || "").replace(/\s+/g, " ").trim();
                 const previousText = (paragraph?.previousElementSibling?.textContent || "")
                     .replace(/\s+/g, " ")
                     .trim();
-                const label = ownText || previousText || `File option ${index + 1}`;
-                const normalized = label.toLowerCase();
-                const hintedFormat = normalized.includes("flac")
-                    ? "flac"
-                    : normalized.includes("wav")
-                        ? "wav"
-                        : (normalized.includes("mp3") || /\b320\b/.test(normalized))
-                            ? "mp3"
-                            : null;
+                const formatOf = (text) => {
+                    const match = text.match(/(?:^|[\s.(])(?:format\s*[:=-]?\s*)?(mp3|flac|wav)(?=$|[\s.)])/i);
+                    return match?.[1].toLowerCase() || (/^320\s*(?:kbps|kb\/s|k)?$/i.test(text) ? "mp3" : null);
+                };
+                // Commentary often shares the iframe's paragraph. A labelled
+                // previous paragraph is more useful than unrelated own text.
+                const previous = paragraph?.previousElementSibling;
+                const previousFormat = previous?.querySelector("iframe") ? null : formatOf(previousText);
+                const hintedFormat = formatOf(ownText) || previousFormat;
+                const label = hintedFormat ? hintedFormat.toUpperCase() : `File option ${index + 1}`;
                 return { providerId, label, hintedFormat };
             })
             .filter((provider) => provider.providerId);
         return {
-            title: document.querySelector("h1")?.textContent?.trim() || document.title,
+            title: document.querySelector("h1.ipsType_pageTitle, #ipsLayout_mainArea h1")?.textContent?.trim() || document.title,
             url: canonicalUrl,
             providers: [...new Map(providers.map((provider) => [provider.providerId, provider])).values()],
         };

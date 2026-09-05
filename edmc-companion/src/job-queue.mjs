@@ -27,7 +27,7 @@ export class JobQueue extends EventEmitter {
             handler,
         };
         this.jobs.unshift(job);
-        this.jobs = this.jobs.slice(0, this.retain);
+        this.pruneHistory();
         this.pending.push(job);
         queueMicrotask(() => this.#drain());
         return publicJob(job);
@@ -35,6 +35,11 @@ export class JobQueue extends EventEmitter {
 
     list() {
         return this.jobs.map(publicJob);
+    }
+
+    pruneHistory() {
+        let finished = 0;
+        this.jobs = this.jobs.filter((job) => ["queued", "running"].includes(job.state) || ++finished <= this.retain);
     }
 
     hasActiveJobs() {
@@ -95,6 +100,7 @@ export class JobQueue extends EventEmitter {
                 }
                 job.finishedAt = new Date().toISOString();
                 this.emit("changed", publicJob(job));
+                this.pruneHistory();
             }
         } finally {
             this.running = false;
