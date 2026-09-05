@@ -21,6 +21,81 @@ The current development target is:
 - Pioneer DDJ-FLX6
 - USB media exported by Rekordbox
 
+## BiteDJ customizations
+
+The application is more than the stock BiteDJ interface bundled into an image.
+PiFlex adds display choices, controller-first library workflows, EDMC integration,
+and appliance controls. The underlying playback engine, effects, cue machinery,
+and much of the USB/library support come from BiteDJ and Mixxx; they are not
+presented here as newly invented PiFlex features.
+
+### Published application changes
+
+The following are in this branch's committed source. Source availability does
+not mean every change is installed in an older Pi image or hardware-validated;
+see [Current status](#current-status) for that distinction.
+
+- **Independent layouts and themes:** choose PiFlex, XDJ, or Pioneer for the
+  main deck layout and independently for the visual theme. Day/Night lighting,
+  display defaults reset, and persisted library text sizing are exposed in
+  Settings. These are presentation choices, not emulations of Pioneer firmware.
+- **Waveform controls:** RGB, filtered, and stacked styles; fixed or EQ-responsive
+  rendering; Slim/PiFlex/Bold visual height and Wide/PiFlex/Near zoom presets.
+  The full-deck-width layout fix is included. These controls are separate from
+  the newer imported-waveform normalization work described below.
+- **Library and preparation:** All Tracks combines local and Rekordbox tracks,
+  a controller-first Prepare list supports set preparation, and library column
+  visibility and relative widths are configurable. Library text size persists
+  across restarts.
+- **Controller navigation and load safety:** the FLX6 profile supports the
+  touch-first workflow; Browse navigation covers the source list, track views,
+  and EDMC, including format selection. Deck Lock exposes Lock/Stop/Live load
+  policies. The latest Browse/format changes still need the physical-controller
+  verification pass listed below.
+- **EDMC inside BiteDJ:** search and browse releases, choose download formats,
+  and load/preview downloaded tracks through the normal local-track path.
+  Settings expose Music/EDMC, Downloads, USB/EDMC, or a custom destination;
+  flat or genre folders; and manual or automatic addition to All Tracks.
+  Authentication, browser automation, and transfers run in the separate
+  companion, not the audio callback.
+- **Appliance controls:** USB drive management, an explicit Restart BiteDJ
+  action, and supervisor handling that distinguishes requested restarts from
+  failures. The newer download-aware eject handshake is still local work,
+  as noted below.
+
+Source entry points: [settings and display controls](res/skins/BiteDJ/settings.xml),
+[BiteDJ skin](res/skins/BiteDJ/), [FLX6 mapping](res/controllers/Pioneer-DDJ-FLX6.midi.xml),
+[library integration](src/library/), [native EDMC client](src/library/edmc/),
+and [EDMC companion](edmc-companion/README.md).
+
+### Local development work, not yet published (September 4, 2026)
+
+These changes exist in the development workspace but are **not included in the
+published source checkpoint documented here**. This README update does not ship
+them. They require their own reviewed application commit/build and validation.
+
+| Area | Local implementation and remaining boundary |
+| --- | --- |
+| Rekordbox analysis loading | Safer database page-chain traversal and analysis parsing, including DAT-only beat/cue handling and preservation of user overrides. Malformed exports must not silently replace good track state. |
+| Exported waveforms | Import of `.2EX` three-band overview/detail data, with amplitude normalization adapted to BiteDJ's renderer. Native style, gain, and zoom remain separate controls; this is not pixel-identical Pioneer rendering. |
+| Phrase display | Imported `PSSI` phrases appear below the whole-track overview and along the lower part of the scrolling waveform. Phrase/fill timing follows the exported beat grid. Tracks without exported phrase data have no imported phrase strip; this does not generate missing analysis. |
+| Native storage integration | Keep downloaded-track Load/Preview state tied to its actual storage identity, and coordinate the Settings eject action with the companion. Companion-side storage/eject APIs are published; these native-client changes are not yet published. |
+
+The Rekordbox scope is **reading existing exported USB libraries and their
+available analysis**. Full OneLibrary/Device Library Plus-only support, desktop
+`master.db` support, guest player-settings mapping, and writing playlists/cues
+back for Rekordbox or Pioneer players are not promised. This is not full CDJ or
+XDJ-RX feature parity.
+
+### Application versus OS
+
+The modified BiteDJ application source is available here independently of the
+image recipe in `os/`. Building that source is distinct from flashing PiFlex OS;
+Pi-specific system controls also depend on the runtime scripts/services. There
+is not yet a separately published PiFlex BiteDJ-only distribution or supported
+standalone installer. A separate application fork/package remains a packaging
+decision, not something already delivered by this README.
+
 ## Why a custom OS?
 
 PiFlex OS exists to give live audio predictable access to the Pi instead of
@@ -78,9 +153,7 @@ Not yet proven:
 - Controllers, displays, or Raspberry Pi boards other than the target above
 - A stable, supported end-user image/update channel
 
-## Repository layout
-
-### EDMC reliability update (September 2026)
+## EDMC reliability update (September 2026)
 
 The companion now reads the current genre catalog, handles MP3/WAV/FLAC labels
 more reliably, and avoids visiting every preview page just to list file types.
@@ -102,7 +175,7 @@ faster Internet transfers or interruption-free live playback.
 See the [companion README](edmc-companion/README.md) and
 [parsing, validation and latency notes](docs/edmc-parser-and-validation.md).
 
-### Source directories
+## Repository layout
 
 - `os/` is the PiFlex OS image definition: Debian package layer, Pi 5 display
   setup, kiosk, service priorities, CPU/IRQ tuning, recovery, USB mounting,
