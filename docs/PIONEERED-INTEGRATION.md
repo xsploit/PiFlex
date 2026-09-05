@@ -67,6 +67,15 @@ one-second movement checks, including mixed audio sample rates, zoom/scale/rate
 variations, slip coordinates and missing analysis. Audio controls are unchanged
 by the test. This verifies display timing, not audible beatgrid correctness.
 
+The correction was built, installed and restarted on the Pi with user approval
+on September 4, 2026 (Pacific), code revision `f2e6ecc672`. The regression also
+passed natively on ARM64, reporting **94.5 pixels/beat for both sources**. The
+installed executable hash is
+`9a257cef5781c2d8df94161e4956c428b8a4a6d69f33e8962374be30c96a918c`.
+FLX6 PCM and bidirectional MIDI connections were active after restart. This
+does not claim an audible two-track alignment test; BPM and audio data were not
+modified. The earlier presentation-build hash below is historical.
+
 On Linux/WSL with Qt6 development packages:
 
 ```sh
