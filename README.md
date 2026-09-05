@@ -11,6 +11,11 @@ just a BiteDJ skin or controller mapping. This repository contains the complete
 PiFlex OS image recipe and runtime layer as well as the modified BiteDJ source
 and EDMC companion used by that image.
 
+Upstream credits: [Team Deckshark](https://github.com/TeamDeckshark) ·
+[Alyxx](https://github.com/alyxxxinteractive) ·
+[BiteDJ source](https://github.com/TeamDeckshark/bitedj).
+Thank you for the upstream work that PiFlex builds on.
+
 The name refers to a flexible Pi DJ system, not a claim that every controller
 or Raspberry Pi model is already supported.
 
