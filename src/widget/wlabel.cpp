@@ -2,10 +2,12 @@
 
 #include <QEvent>
 #include <QFont>
+#include <QPainter>
 
 #include "moc_wlabel.cpp"
 #include "skin/legacy/skincontext.h"
 #include "widget/wskincolor.h"
+#include "widget/textscroll.h"
 
 WLabel::WLabel(QWidget* pParent)
         : QLabel(pParent),
@@ -16,6 +18,8 @@ WLabel::WLabel(QWidget* pParent)
           m_scaleFactor(1.0),
           m_highlight(0),
           m_widthHint(0) {
+    m_scrollTimer.setInterval(40);
+    connect(&m_scrollTimer, &QTimer::timeout, this, [this] { update(); });
 }
 
 void WLabel::setup(const QDomNode& node, const SkinContext& context) {
@@ -80,13 +84,18 @@ void WLabel::setup(const QDomNode& node, const SkinContext& context) {
             m_elideMode = Qt::ElideMiddle;
         } else if (elide == "left") {
             m_elideMode = Qt::ElideLeft;
+        } else if (elide == "scroll") {
+            m_elideMode = Qt::ElideNone;
+            m_scrollText = true;
+            setTextFormat(Qt::PlainText);
         } else if (elide == "none") {
             m_elideMode = Qt::ElideNone;
         } else {
             qDebug() << "WLabel::setup(): Elide =" << elide <<
-                    "unknown, use right, middle, left or none.";
+                    "unknown, use right, middle, left, scroll or none.";
         }
     }
+    setText(m_longText);
 }
 
 QString WLabel::text() const {
@@ -94,8 +103,15 @@ QString WLabel::text() const {
 }
 
 void WLabel::setText(const QString& text) {
+    const bool changed = m_longText != text;
     m_longText = text;
-    if (m_elideMode != Qt::ElideNone) {
+    if (m_scrollText) {
+        if (changed) {
+            m_scrollClock.restart();
+        }
+        setAccessibleName(m_longText);
+        updateScrolling();
+    } else if (m_elideMode != Qt::ElideNone) {
         QFontMetrics metrics(font());
         // Measure the text for the optimum label width
         // frameWidth() is the maximum of the sum of margin, border and padding
@@ -110,6 +126,12 @@ void WLabel::setText(const QString& text) {
 }
 
 bool WLabel::event(QEvent* pEvent) {
+    if (pEvent->type() == QEvent::Hide) {
+        m_scrollTimer.stop();
+        m_scrollClock.invalidate();
+    } else if (pEvent->type() == QEvent::Show && m_scrollText) {
+        updateScrolling();
+    }
     if (pEvent->type() == QEvent::ToolTip) {
         updateTooltip();
     } else if (pEvent->type() == QEvent::FontChange) {
@@ -130,7 +152,52 @@ bool WLabel::event(QEvent* pEvent) {
 
 void WLabel::resizeEvent(QResizeEvent* event) {
     QLabel::resizeEvent(event);
+    m_scrollClock.invalidate();
     setText(m_longText);
+}
+
+QRect WLabel::scrollRect() const {
+    QRect area = contentsRect().adjusted(margin(), margin(), -margin(), -margin());
+    const int textIndent = indent() >= 0 ? indent() :
+            (frameWidth() > 0 ? fontMetrics().horizontalAdvance(QLatin1Char('x')) / 2 : 0);
+    area.adjust(textIndent, 0, 0, 0);
+    return area;
+}
+
+void WLabel::updateScrolling() {
+    const int available = scrollRect().width();
+    m_scrollOverflow = available > 0 && fontMetrics().horizontalAdvance(m_longText) > available;
+    // Let QLabel draw the frame/background in both modes; only overflowing
+    // text is custom-painted. Palette and CSS remain authoritative in Day/Night.
+    QLabel::setText(m_scrollOverflow ? QString() : m_longText);
+    if (m_scrollOverflow && isVisible()) {
+        if (!m_scrollClock.isValid()) {
+            m_scrollClock.start();
+        }
+        m_scrollTimer.start();
+    } else {
+        m_scrollTimer.stop();
+        m_scrollClock.invalidate();
+    }
+    update();
+}
+
+void WLabel::paintEvent(QPaintEvent* event) {
+    QLabel::paintEvent(event);
+    if (!m_scrollText || !m_scrollOverflow) {
+        return;
+    }
+    const QRect area = scrollRect();
+    const int width = fontMetrics().horizontalAdvance(m_longText);
+    const double offset = mixxx::textScrollOffset(
+            m_scrollClock.isValid() ? m_scrollClock.elapsed() : 0,
+            width - area.width(), 30.0 * m_scaleFactor);
+    QPainter painter(this);
+    painter.setClipRect(area);
+    painter.setPen(palette().color(isEnabled() ? QPalette::Active : QPalette::Disabled,
+            foregroundRole()));
+    painter.drawText(QRectF(area.x() - offset, area.y(), width, area.height()),
+            Qt::AlignLeft | Qt::AlignVCenter | Qt::TextSingleLine, m_longText);
 }
 
 void WLabel::fillDebugTooltip(QStringList* debug) {
@@ -153,7 +220,10 @@ void WLabel::setHighlight(int highlight) {
 QSize WLabel::sizeHint() const {
     // make sure the sizeHint fits for the entire string.
     QSize size = QLabel::sizeHint();
-    if (m_elideMode != Qt::ElideNone) {
+    if (m_scrollText) {
+        // A long title must not force the deck or its waveform to grow/shrink.
+        size.setWidth(0);
+    } else if (m_elideMode != Qt::ElideNone) {
         size.setWidth(m_widthHint);
     }
     return size;

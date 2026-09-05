@@ -1,6 +1,8 @@
 #include "widget/wnumberpos.h"
 
 #include "control/controlproxy.h"
+#include <QMouseEvent>
+#include "skin/legacy/skincontext.h"
 #include "moc_wnumberpos.cpp"
 #include "util/duration.h"
 
@@ -26,6 +28,37 @@ WNumberPos::WNumberPos(const QString& group, QWidget* parent)
     m_pTimeFormat->connectValueChanged(
             this, &WNumberPos::slotSetTimeFormat);
     slotSetTimeFormat(m_pTimeFormat->get());
+}
+
+void WNumberPos::setup(const QDomNode& node, const SkinContext& context) {
+    WNumber::setup(node, context);
+    const QString modeKey = context.selectString(node, "ModeConfigKey");
+    const int comma = modeKey.indexOf(QLatin1Char(','));
+    if (comma <= 0 || comma == modeKey.size() - 1) {
+        return; // Other skins retain the existing global display preference.
+    }
+    auto* control = new ControlProxy(modeKey.left(comma).trimmed(),
+            modeKey.mid(comma + 1).trimmed(), this, ControlFlag::NoAssertIfMissing);
+    if (!control->valid()) {
+        delete control;
+        return;
+    }
+    delete m_pShowTrackTimeRemaining;
+    m_pShowTrackTimeRemaining = control;
+    m_perDeckMode = true;
+    control->connectValueChanged(this, &WNumberPos::slotSetDisplayMode);
+    slotSetDisplayMode(control->get());
+    setCursor(Qt::PointingHandCursor);
+}
+
+void WNumberPos::mousePressEvent(QMouseEvent* event) {
+    if (m_perDeckMode && event->button() == Qt::LeftButton) {
+        m_pShowTrackTimeRemaining->set(
+                m_displayMode == TrackTime::DisplayMode::REMAINING ? 0.0 : 1.0);
+        event->accept();
+        return;
+    }
+    WNumber::mousePressEvent(event);
 }
 
 // Reimplementing WNumber::setValue
@@ -89,6 +122,11 @@ void WNumberPos::slotTimeRemainingUpdated(double dTimeRemaining) {
 }
 
 void WNumberPos::slotSetDisplayMode(double remain) {
+    if (m_perDeckMode) {
+        // This compact readout offers two modes, even if a saved/custom control
+        // contains a legacy "both" value or another out-of-range number.
+        remain = remain == 0.0 ? 0.0 : 1.0;
+    }
     if (remain == 1.0) {
         m_displayMode = TrackTime::DisplayMode::REMAINING;
     } else if (remain == 2.0) {

@@ -59,6 +59,12 @@ Jump to: [Display](#display-skins-and-waveform-layout) ·
 - **Slim / PiFlex / Bold** waveform visual-gain presets.
 - **Wide / PiFlex / Near** scrolling-waveform zoom presets.
 - **Linked zoom** for both decks.
+- Matching low/mid/high frequency colors in the overview and scrolling views
+  (blue/orange/cream in **Filt** mode), without changing analysis or audio gain.
+- Long **track titles and artist names scroll** within their existing space,
+  pause at either end, and stop animating when hidden or when the text fits.
+- Tap a deck's **time readout** to switch elapsed/remaining independently of the
+  other deck. Each deck's choice is saved; remaining time is the initial default.
 - Stable scrolling-waveform height when changing **channel trim**; audio trim
   still changes the sound, while the visualization retains its comparison scale.
 - Migration of stale user skin overrides during updates, so an old local skin
@@ -66,6 +72,10 @@ Jump to: [Display](#display-skins-and-waveform-layout) ·
 
 Sources: [display settings](res/skins/BiteDJ/settings.xml) and
 [BiteDJ skin](res/skins/BiteDJ/).
+Selected presentation ideas were adapted from
+[Pioneered by ntamas](https://github.com/ntamas94/pioneered-by-ntamas/).
+See the [integration notes](docs/PIONEERED-INTEGRATION.md) for the deliberately
+limited scope; this does not replace PiFlex's analyzer or enable a four-deck view.
 
 ### FX, key, and beatgrid controls
 
@@ -305,9 +315,11 @@ Verification recorded September 4, 2026:
 - **Six updater tests passed**, along with native storage, Rekordbox parser,
   waveform, phrase-layout, and drawing fixtures.
 - **Eight C++ translation units passed syntax checks**.
+- The presentation adaptation also passed its Qt widget fixtures, Rekordbox
+  waveform/phrase regressions, phrase-layout/GL checks, and a **complete linked
+  ARM64 build on the Pi**. See [integration notes](docs/PIONEERED-INTEGRATION.md).
 
-Release qualification still requires a complete linked ARM64 build and deployment
-of the latest changes, physical FLX6 Browse/format-picker and inherited pad-mode
+Release qualification still requires physical FLX6 Browse/format-picker and inherited pad-mode
 checks, multi-drive disconnect/eject testing, and a 30-minute two-deck run with
 measured zero xruns under simultaneous display, analysis, and download load.
 Local regression results do not establish live transfer speed or audio stability.

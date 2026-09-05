@@ -11,6 +11,10 @@ class WNumberPos : public WNumber {
 
   public:
     explicit WNumberPos(const QString& group, QWidget* parent = nullptr);
+    void setup(const QDomNode& node, const SkinContext& context) override;
+
+  protected:
+    void mousePressEvent(QMouseEvent* event) override;
 
   private slots:
     void setValue(double dValue) override;
@@ -20,6 +24,7 @@ class WNumberPos : public WNumber {
     void slotSetTimeFormat(double);
 
   private:
+    bool m_perDeckMode = false;
 
     TrackTime::DisplayMode m_displayMode;
     TrackTime::DisplayFormat m_displayFormat;

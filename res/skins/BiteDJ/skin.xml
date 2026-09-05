@@ -10,6 +10,11 @@
 			<attribute config_key="[App],num_decks">4</attribute>
 			<attribute config_key="[App],num_samplers">16</attribute>
 			<attribute persist="true" config_key="[Skin],show_maximized_library">0</attribute>
+            <!-- Independent deck readouts; tapping toggles elapsed/remaining. -->
+            <attribute persist="true" config_key="[PiFlex],time_mode1">1</attribute>
+            <attribute persist="true" config_key="[PiFlex],time_mode2">1</attribute>
+            <attribute persist="true" config_key="[PiFlex],time_mode3">1</attribute>
+            <attribute persist="true" config_key="[PiFlex],time_mode4">1</attribute>
 			<attribute persist="true" config_key="[Master],skin_settings">0</attribute>
 			<attribute persist="true" config_key="[Skin],show_microphones">0</attribute>
 			<attribute persist="true" config_key="[VinylControl],show_vinylcontrol">0</attribute>
