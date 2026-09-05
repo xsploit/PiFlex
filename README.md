@@ -59,6 +59,9 @@ Jump to: [Display](#display-skins-and-waveform-layout) ·
 - **Slim / PiFlex / Bold** waveform visual-gain presets.
 - **Wide / PiFlex / Near** scrolling-waveform zoom presets.
 - **Linked zoom** for both decks.
+- A shared **time-based scrolling scale** for native Mixxx and imported
+  Rekordbox waveforms. Their different analysis densities no longer produce
+  different scroll speeds or beat spacing at the same tempo and zoom.
 - Matching low/mid/high frequency colors in the overview and scrolling views
   (blue/orange/cream in **Filt** mode), without changing analysis or audio gain.
 - Long **track titles and artist names scroll** within their existing space,

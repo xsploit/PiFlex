@@ -47,10 +47,31 @@ import path. Missing analysis is not fabricated to fill a display.
 
 ## Checks
 
+### Mixed-source time-scale correction
+
+The earlier Rekordbox integration (`e28a950e84`) introduced 150 Hz detail
+waveforms alongside 441 Hz native analysis. The inherited renderer interpreted
+zoom as source points per pixel, so equal tempo/zoom produced 94.5 versus 32.14
+pixels per beat at 140 BPM and zoom 2. Linked zoom alone could not fix this.
+
+The renderer now computes audio samples per pixel from the decoded audio sample
+rate using the existing 441 Hz reference zoom, then converts to source waveform
+points. Native zoom is preserved; imported waveforms, beat lines, cue marks and
+phrase overlays share its time axis. No audio controls, beatgrids, analysis data
+or waveform caches are changed. No reanalysis is needed.
+
+`test_waveform_time_scale.py` executes the production pre-render method with real
+waveform allocation and fixture controls/VSync. The original code fails the
+mixed-density comparison; the corrected code passes equal beat spacing and
+one-second movement checks, including mixed audio sample rates, zoom/scale/rate
+variations, slip coordinates and missing analysis. Audio controls are unchanged
+by the test. This verifies display timing, not audible beatgrid correctness.
+
 On Linux/WSL with Qt6 development packages:
 
 ```sh
 python3 os/tests/test_deck_presentation.py
+python3 os/tests/test_waveform_time_scale.py
 python3 os/tests/test_phrase_layout.py
 python3 os/tests/test_rekordbox_waveform.py
 python3 os/tests/test_rekordbox_phrases.py

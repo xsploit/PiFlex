@@ -6,6 +6,7 @@
 #include "control/controlproxy.h"
 #include "track/track.h"
 #include "util/math.h"
+#include "util/fpclassify.h"
 #include "waveform/renderers/waveformrendererabstract.h"
 #include "waveform/visualplayposition.h"
 #include "waveform/waveform.h"
@@ -20,6 +21,9 @@ const double WaveformWidgetRenderer::s_defaultPlayMarkerPosition = 0.5;
 
 namespace {
 constexpr int kDefaultDimBrightThreshold = 127;
+// Zoom historically means samples/pixel of a 441 Hz native waveform. Keep
+// that time scale for all sources, including Rekordbox's 150 Hz envelopes.
+constexpr double kReferenceVisualSampleRate = 441.0;
 } // namespace
 
 WaveformWidgetRenderer::WaveformWidgetRenderer(const QString& group)
@@ -138,11 +142,22 @@ void WaveformWidgetRenderer::onPreRender(VSyncThread* vsyncThread) {
     double visualSamplePerPixel = m_zoomFactor * rateRatio / m_scaleFactor;
     m_visualSamplePerPixel = math_max(0.01, visualSamplePerPixel);
 
+    m_audioSamplePerPixel = 0.0;
     TrackPointer pTrack = m_pTrack;
     if (pTrack) {
         ConstWaveformPointer pWaveform = pTrack->getWaveform();
         if (pWaveform) {
-            m_audioSamplePerPixel = m_visualSamplePerPixel * pWaveform->getAudioVisualRatio();
+            const double audioRate = double(pTrack->getSampleRate());
+            const double audioVisualRatio = pWaveform->getAudioVisualRatio();
+            if (util_isfinite(audioRate) && audioRate > 0.0 &&
+                    util_isfinite(audioVisualRatio) && audioVisualRatio > 0.0) {
+                // Apply the minimum zoom above in reference units, not in the
+                // source's sample units. Marks, beats, phrases and signal data
+                // must all share this same seconds-to-pixels conversion.
+                m_audioSamplePerPixel = m_visualSamplePerPixel *
+                        (audioRate / kReferenceVisualSampleRate);
+                m_visualSamplePerPixel = m_audioSamplePerPixel / audioVisualRatio;
+            }
         }
     }
 
