@@ -1,7 +1,7 @@
 # BiteDJ EDMC companion
 
 This is the standalone acquisition side of BiteDJ's EDMC workflow. It is a
-Node.js service that controls the Raspberry Pi OS system Chromium through
+Node.js service that controls system Chromium on the Pi through
 Playwright. It does not run inside BiteDJ and it never runs work on Mixxx's
 audio thread.
 
@@ -24,7 +24,7 @@ selected USB/<configured folder>/<optional subsection>/<track>.(mp3|flac|wav)
 selected USB/.bitedj/edmc/library.json
 ```
 
-The proof UI and the eventual BiteDJ sidebar use the same versioned API. The
+The setup/proof UI and the implemented BiteDJ client use the same versioned API. The
 proof UI is disposable; the companion, USB layout, job states, and API are the
 building blocks that stay.
 
@@ -35,7 +35,8 @@ building blocks that stay.
   visible companion window already exists.
 - Only one browser job runs at a time.
 - The browser is not kept alive by the service when it has no work.
-- The final media transfer is streamed directly to the selected USB. The
+- The final media transfer is streamed directly to the selected USB or managed
+  SD fallback. For USB storage, the
   default destination is `Music/EDMC/<subsection>`, but the folder and whether
   subsection folders are used are persisted settings. A track
   is first written under `.bitedj/edmc/incoming`, synchronized, checked by its
@@ -45,8 +46,8 @@ building blocks that stay.
   new work. A running download is pinned to its original destination; removal
   does not redirect it into an empty system-disk mountpoint. Two USB devices
   retain separate identities. Drive changes are rejected while downloads run.
-- `library.json` is also replaced atomically. It is the future source for the
-  BiteDJ `EDMC Downloads` library feature.
+- `library.json` is also replaced atomically. The companion reconciles it with
+  release/download state served to BiteDJ for Load/Preview and library import.
 - The service is intended to run with low CPU and I/O weight. BiteDJ remains
   the real-time priority.
 
@@ -87,10 +88,11 @@ clear download error; there is no silent signature-only fallback.
   decode or an audible-quality guarantee. Existing library inventory stays a
   cheap size/signature check rather than rescanning every file.
 
-Local checks: **51 pass on Linux/WSL; 49 pass and two Linux-only skips on Windows**
+Checks recorded September 4, 2026: **51 pass on Linux/WSL; 49 pass and two Linux-only skips on Windows**
 (Node's count includes its discovered fixture helper). Live browser samples
-confirmed the repaired catalog and dual-format labels. Pi deployment, live-host
-throughput and simultaneous playback/load testing remain outstanding.
+confirmed the repaired catalog and dual-format labels. Deployment of the latest
+reliability update, live-host throughput and simultaneous playback/load testing
+have not been confirmed by this audit.
 
 See [implementation and test details](../docs/edmc-parser-and-validation.md).
 
@@ -120,12 +122,13 @@ Local state and the Chromium profile live below
 - `POST /v1/jobs/<id>/cancel`
 
 Refresh, resolve, and download calls enqueue work and return a job ID. Clients
-poll `/v1/jobs`; BiteDJ can initially use the same mechanism from
-`QNetworkAccessManager` without adding WebSockets or a web engine.
+poll `/v1/jobs`; BiteDJ uses `QNetworkAccessManager` without embedding WebSockets
+or a web engine for this integration.
 
 ## Hardware proof gates
 
-Local tests do not claim the Pi workflow is proven. The live gates are:
+Earlier Pi use was reported working, but local regression tests do not certify
+the newest source on the hardware. Repeat these gates for a release candidate:
 
 1. Visible EDMC sign-in on the Pi.
 2. Close Chromium, reboot, and pass `auth/check` without signing in again.
@@ -137,4 +140,5 @@ Local tests do not claim the Pi workflow is proven. The live gates are:
 6. While a deck is playing, repeat refresh/download and check xruns, CPU,
    memory, and UI responsiveness before enabling automatic analysis.
 
-No BiteDJ compile is required until those gates pass.
+Companion-only changes can be tested without rebuilding BiteDJ. Changes to its
+native client require rebuilding and deploying the application as well.

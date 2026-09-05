@@ -1,6 +1,6 @@
 # PiFlex OS
 
-This directory is the reproducible PiFlex OS image definition. It turns a
+This directory contains the PiFlex OS image build definition. It turns a
 Debian 13 arm64 `minbase` filesystem into the complete Raspberry Pi 5 DJ
 appliance: boot configuration, touch kiosk, audio/controller priorities,
 networking, removable media, EDMC, recovery, updates, rollback, and BiteDJ.
@@ -13,7 +13,7 @@ music library belongs in a public image.
 The current image profile includes:
 
 - Pi 5 `linux-image-rpi-2712` packages with 16 KiB pages
-- Official 10.1-inch Touch Display 2 in landscape orientation
+- Official 10-inch Touch Display 2 in landscape orientation
 - Sway kiosk startup with BiteDJ crash recovery
 - Direct ALSA operation without a PulseAudio or PipeWire server
 - CPU/IRQ tuning for BiteDJ audio and the FLX6 USB device
@@ -61,7 +61,7 @@ builder and output locations with `PFLX_IMAGE_GEN`, `PFLX_SOURCE_COPY`, and
 `PFLX_BUILD_ROOT` if required.
 
 ```powershell
-wsl.exe -d Ubuntu -u root -- bash -lc \
+wsl.exe -d Ubuntu -u root -- bash -lc `
   "/mnt/c/path/to/PiFlex/os/scripts/build-wsl.sh /mnt/c/path/to/PiFlex/os"
 ```
 

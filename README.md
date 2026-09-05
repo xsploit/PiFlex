@@ -17,7 +17,8 @@ or Raspberry Pi model is already supported.
 The current development target is:
 
 - Raspberry Pi 5 (4 GB)
-- Official Raspberry Pi Touch Display 2 (10.1-inch, 1920x1200)
+- Official [Raspberry Pi Touch Display 2](https://www.raspberrypi.com/products/touch-display-2/)
+  (10-inch model, configured as 1920x1200 landscape)
 - Pioneer DDJ-FLX6
 - USB media exported by Rekordbox
 
@@ -41,8 +42,8 @@ see [Current status](#current-status) for that distinction.
   Settings. These are presentation choices, not emulations of Pioneer firmware.
 - **Waveform controls:** RGB, filtered, and stacked styles; fixed or EQ-responsive
   rendering; Slim/PiFlex/Bold visual height and Wide/PiFlex/Near zoom presets.
-  The full-deck-width layout fix is included. These controls also apply to the
-  imported-waveform display described below.
+  The full-deck-width layout fix is included. Imported analysis uses BiteDJ's
+  renderers; scrolling zoom is not a zoom control for the whole-track overview.
 - **Library and preparation:** All Tracks combines local and Rekordbox tracks,
   a controller-first Prepare list supports set preparation, and library column
   visibility and relative widths are configurable. Library text size persists
@@ -76,7 +77,7 @@ pushing source does not update a running Pi automatically.
 
 | Area | Included implementation and compatibility boundary |
 | --- | --- |
-| Rekordbox analysis loading | Safer database page-chain traversal and analysis parsing, including DAT-only beat/cue handling and preservation of user overrides. Malformed exports must not silently replace good track state. |
+| Rekordbox analysis loading | Bounds/cycle checks for database page chains, DAT-only beat/cue handling, and application of user overrides after import. Analysis parse failures produce warnings without intentionally blocking audio loading; this is not a guarantee against every malformed export. |
 | Exported waveforms | Import of `.2EX` three-band overview/detail data, with amplitude normalization adapted to BiteDJ's renderer. Native style, gain, and zoom remain separate controls; this is not pixel-identical Pioneer rendering. |
 | Phrase display | Imported `PSSI` phrases appear below the whole-track overview and along the lower part of the scrolling waveform. Phrase/fill timing follows the exported beat grid. Tracks without exported phrase data have no imported phrase strip; this does not generate missing analysis. |
 | Native storage integration | Keep downloaded-track Load/Preview state tied to its actual storage identity, and coordinate the Settings eject action with the companion. Both the companion APIs and native-client integration are included. Multiple USB destinations stay distinct; explicit SD fallback applies to new jobs, not migration of interrupted downloads. |
@@ -102,16 +103,19 @@ decision, not something already delivered by this README.
 
 ## Why a custom OS?
 
-PiFlex OS exists to give live audio predictable access to the Pi instead of
-running BiteDJ on top of a normal desktop installation. The current image:
+PiFlex OS aims to give live audio predictable access to the Pi instead of
+running BiteDJ on top of a normal desktop installation. The committed image
+recipe configures the following; effective settings on a particular Pi still
+need runtime verification:
 
 - starts from Debian 13 arm64 `minbase`, not Raspberry Pi OS Desktop
 - boots straight into a minimal Sway/Wayland kiosk with Xwayland disabled
 - uses direct ALSA with no PulseAudio or PipeWire server
-- runs the CPU governor in performance mode and disables swap during a set
-- reserves CPU 3 for BiteDJ's audio callback and CPU 2 for controller/USB work
-- moves USB-host interrupts to CPU 2 and applies real-time priority when the
-  running kernel exposes threaded IRQs
+- requests the performance CPU governor and disables swap during startup
+- configures CPU isolation and requests CPU 3 for BiteDJ's audio callback and
+  CPU 2 for controller work
+- attempts to move USB-host interrupts to CPU 2 and apply real-time priority
+  when the running kernel exposes threaded IRQs
 - gives the BiteDJ session real-time and locked-memory limits
 - confines EDMC/Chromium work to CPUs 0-1 at low CPU and idle I/O priority
 - disables unattended package timers and unnecessary background maintenance
@@ -119,17 +123,26 @@ running BiteDJ on top of a normal desktop installation. The current image:
 - automounts DJ USB media and expands the root filesystem on first boot
 - provides SSH, mDNS, recovery shortcuts, application updates, and rollback
 
-The development image compresses to about 653 MB and expands to a roughly
-5.7 GB flashable image. Chromium and networking remain available because EDMC
+Image size depends on the application bundle, packages, and build configuration;
+no fixed download size is promised for the current source. Chromium and
+networking remain available because EDMC
 authentication and field recovery are explicit PiFlex requirements; they are
 kept outside the real-time audio process.
 
+Configuration evidence: [image customization](os/scripts/customize-rootfs.sh),
+[session service](os/layer/rootfs-overlay/etc/systemd/system/pflx-session.service),
+[runtime tuning](os/layer/rootfs-overlay/usr/local/sbin/pflx-tune), and
+[companion service](os/layer/rootfs-overlay/etc/systemd/system/pflx-edmc.service).
+
 ## Current status
 
-PiFlex OS is a working developer image for the target hardware below. It is not
-yet a broadly supported appliance release.
+Status reviewed September 4, 2026 against source through `e28a950e84` and the
+development test record. The application changes above are committed, not a
+list of unpublished plans. PiFlex OS remains a development image, not yet a
+broadly supported appliance release.
 
-Verified on the target system:
+Previously reported working on the development Pi (not re-tested in this
+documentation audit, and not proof that every latest commit is installed):
 
 - Pi 5 boot, display, touch, Ethernet, Wi-Fi, SSH, and automatic BiteDJ launch
 - DDJ-FLX6 MIDI control and its native audio interface
@@ -137,7 +150,7 @@ Verified on the target system:
 - Rekordbox USB library browsing and track loading
 - FLX6-focused controller mapping and touch layout changes
 - Authenticated EDMC browsing through an out-of-process companion
-- Streaming MP3, FLAC, and WAV downloads directly to removable USB storage
+- EDMC downloading to removable USB storage
 - Loading downloaded files through BiteDJ's normal local-track machinery
 
 Implemented but awaiting another physical-controller verification pass:
@@ -163,11 +176,14 @@ Not yet proven:
 
 ## EDMC reliability update (September 2026)
 
-The companion now reads the current genre catalog, handles MP3/WAV/FLAC labels
+The companion parses the genre navigation sampled during the September 2026
+audit, handles MP3/WAV/FLAC labels
 more reliably, and avoids visiting every preview page just to list file types.
 Clearly labelled options resolve from one release page; recent resolve results
-are cached. Downloaded audio is checked with `ffprobe` before being marked ready,
-with connection/idle timeouts and partial-file cleanup.
+are cached. New downloads receive signature and bounded `ffprobe` stream/packet
+checks before being marked ready, with connection/idle timeouts and partial-file
+cleanup. This is not a full audio decode or audible-quality guarantee; existing
+library inventory uses cheaper size/signature checks.
 
 The storage layer supports distinct USB identities and an explicit SD fallback
 for new work when the selected USB is unavailable. Updates require verified
@@ -175,10 +191,14 @@ backups and include their runtime scripts. Existing Pi images need the
 `ffmpeg` package (which supplies `ffprobe`) before installing this update; new
 image builds include it.
 
-Local verification: 51 Node checks pass on Linux/WSL; Windows passes 49 with
-two Linux-only skips. Six updater fixture tests pass. These changes have **not
-yet been deployed or performance-tested on the Pi**; they are not a claim of
-faster Internet transfers or interruption-free live playback.
+Verification recorded September 4, 2026: 51 Node checks passed on Linux/WSL
+(including a discovered fixture helper); the preceding Windows run passed 49
+with two Linux-only skips. Six updater tests and native storage, Rekordbox,
+phrase-layout, and drawing fixtures passed. Eight C++ translation units passed
+syntax checks; this was not a complete linked ARM64 build. The latest EDMC
+reliability update has no confirmed Pi deployment/performance result in this
+audit. None of these results establishes Internet transfer speed or
+interruption-free live playback.
 
 See the [companion README](edmc-companion/README.md) and
 [parsing, validation and latency notes](docs/edmc-parser-and-validation.md).
