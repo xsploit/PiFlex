@@ -90,9 +90,9 @@ clear download error; there is no silent signature-only fallback.
 
 Checks recorded September 4, 2026: **51 pass on Linux/WSL; 49 pass and two Linux-only skips on Windows**
 (Node's count includes its discovered fixture helper). Live browser samples
-confirmed the repaired catalog and dual-format labels. Deployment of the latest
-reliability update, live-host throughput and simultaneous playback/load testing
-have not been confirmed by this audit.
+confirmed catalog parsing and dual-format labels. Release qualification still
+requires Pi deployment of the latest reliability update, live-host throughput
+measurement, and simultaneous playback/load testing.
 
 See [implementation and test details](../docs/edmc-parser-and-validation.md).
 
@@ -125,10 +125,10 @@ Refresh, resolve, and download calls enqueue work and return a job ID. Clients
 poll `/v1/jobs`; BiteDJ uses `QNetworkAccessManager` without embedding WebSockets
 or a web engine for this integration.
 
-## Hardware proof gates
+## Hardware acceptance tests
 
-Earlier Pi use was reported working, but local regression tests do not certify
-the newest source on the hardware. Repeat these gates for a release candidate:
+Release candidates must pass these hardware checks in addition to the local
+regression tests:
 
 1. Visible EDMC sign-in on the Pi.
 2. Close Chromium, reboot, and pass `auth/check` without signing in again.

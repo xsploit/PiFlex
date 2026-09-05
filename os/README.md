@@ -23,11 +23,10 @@ The current image profile includes:
 - Hash-checked application updates and local rollback
 - Optional PREEMPT_RT kernel build configuration
 
-The development Pi already has PREEMPT_RT enabled (owner-confirmed September 4,
-2026). The kernel configuration remains selectable in the image build; the
-package list above is not a statement of that Pi's currently running kernel.
-Its exact kernel version was not re-read during this update because the device
-was unreachable. Sustained zero-xrun testing remains a separate acceptance gate.
+PREEMPT_RT is enabled on the development system. Kernel selection is configurable
+for new image builds; the base package profile does not determine the kernel
+installed on an existing device. Sustained zero-xrun testing remains a hardware
+acceptance requirement.
 
 Internal commands and service filenames currently retain the short `pflx-*`
 prefix. The user-facing project and OS name is PiFlex.
