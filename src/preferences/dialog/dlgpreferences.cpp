@@ -198,11 +198,23 @@ DlgPreferences::DlgPreferences(
             "ic_preferences_autodj.svg");
 
 #ifdef __BROADCAST__
-    addPageWidget(PreferencesPage(
-                          new DlgPrefBroadcast(this, pSettingsManager->broadcastSettings()),
-                          new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type)),
+    const PreferencesPage broadcastPage(
+            new DlgPrefBroadcast(this, pSettingsManager->broadcastSettings()),
+            new QTreeWidgetItem(contentsTreeWidget, QTreeWidgetItem::Type));
+    addPageWidget(broadcastPage,
             tr("Live Broadcasting"),
             "ic_preferences_broadcast.svg");
+    m_pOpenBroadcast = std::make_unique<ControlPushButton>(
+            ConfigKey("[Preferences]", "show_broadcast"));
+    connect(m_pOpenBroadcast.get(), &ControlObject::valueChanged, this,
+            [this, broadcastPage](double value) {
+                if (value <= 0.0) { return; }
+                show();
+                switchToPage(broadcastPage.pTreeItem->text(0), broadcastPage.pDlg);
+                contentsTreeWidget->setCurrentItem(broadcastPage.pTreeItem);
+                raise();
+                activateWindow();
+            });
 #endif // __BROADCAST__
 
     addPageWidget(PreferencesPage(

@@ -38,6 +38,10 @@
             <SetVariable name="Text">EDMC</SetVariable>
             <SetVariable name="ConfigKey">edmc</SetVariable>
           </Template>
+          <Template src="skin:templates/setting_subtab_button.xml">
+            <SetVariable name="Text">Stream</SetVariable>
+            <SetVariable name="ConfigKey">stream</SetVariable>
+          </Template>
         </Children>
       </WidgetGroup>
 
@@ -311,8 +315,8 @@
                   <!-- Existing Mixxx deck-load protection, exposed here for
                        touchscreen use. Lock rejects a load into a playing
                        deck, Stop stops it before loading, and Live replaces
-                       the track while playback continues. Lock is the safe
-                       default for a standalone controller. -->
+                       the track while playback continues. Fader allows a load
+                       only with the channel fader down or main mix off. -->
                   <WidgetGroup>
                     <ObjectName>SettingsRow</ObjectName>
                     <Layout>horizontal</Layout>
@@ -320,19 +324,25 @@
                     <Children>
                       <Label>
                         <ObjectName>SettingsRowLabel</ObjectName>
-                        <Text>Deck Lock</Text>
+                        <Text>Track Replace</Text>
                         <Size>0me,0me</Size>
                       </Label>
                       <WidgetGroup>
                         <ObjectName>SettingsSegmented</ObjectName>
                         <Layout>horizontal</Layout>
-                        <Size>150f,40f</Size>
+                        <Size>220f,40f</Size>
                         <Children>
                           <Template src="skin:templates/setting_segment_button.xml">
                             <SetVariable name="ObjectName">SettingsSegmentLeft</SetVariable>
                             <SetVariable name="Text">Lock</SetVariable>
                             <SetVariable name="ConfigKey">[Controls],LoadWhenDeckPlaying</SetVariable>
                             <SetVariable name="Value">0</SetVariable>
+                          </Template>
+                          <Template src="skin:templates/setting_segment_button.xml">
+                            <SetVariable name="ObjectName">SettingsSegmentMid</SetVariable>
+                            <SetVariable name="Text">Fader</SetVariable>
+                            <SetVariable name="ConfigKey">[Controls],LoadWhenDeckPlaying</SetVariable>
+                            <SetVariable name="Value">3</SetVariable>
                           </Template>
                           <Template src="skin:templates/setting_segment_button.xml">
                             <SetVariable name="ObjectName">SettingsSegmentMid</SetVariable>
@@ -1308,6 +1318,98 @@
             </Children>
           </WidgetGroup>
 
+          <WidgetGroup trigger="[SettingsTab],stream">
+            <ObjectName>SettingsPanel</ObjectName>
+            <Layout>vertical</Layout>
+            <SizePolicy>me,me</SizePolicy>
+            <Children>
+              <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Audio broadcast (Icecast / Shoutcast)</Text><Size>0me,32f</Size></Label>
+              <WidgetGroup>
+                <Layout>horizontal</Layout><Size>0me,54f</Size>
+                <Children>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>2</NumberStates>
+                    <State><Number>0</Number><Text>Start audio stream</Text></State>
+                    <State><Number>1</Number><Text>Stop audio stream</Text></State>
+                    <Connection><ConfigKey>[Shoutcast],enabled</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>1</NumberStates>
+                    <State><Number>0</Number><Text>Connection settings</Text></State>
+                    <Connection><ConfigKey>[Preferences],show_broadcast</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>5</NumberStates>
+                    <State><Number>0</Number><Text>Disconnected</Text></State>
+                    <State><Number>1</Number><Text>Connecting</Text></State>
+                    <State><Number>2</Number><Text>Connected</Text></State>
+                    <State><Number>3</Number><Text>Connection error</Text></State>
+                    <State><Number>4</Number><Text>Some streams failed</Text></State>
+                    <Connection><ConfigKey>[Shoutcast],status</ConfigKey><ConnectValueFromWidget>false</ConnectValueFromWidget></Connection>
+                  </PushButton>
+                </Children>
+              </WidgetGroup>
+              <Label><ObjectName>SettingsRowHint</ObjectName><Text>Configure host, port, mount, credentials, codec, bitrate and reconnection in Connection settings.</Text><Size>0me,36f</Size></Label>
+              <Label><ObjectName>SettingsRowLabel</ObjectName><Text>Track metadata (separate from audio)</Text><Size>0me,38f</Size></Label>
+              <WidgetGroup>
+                <Layout>horizontal</Layout><Size>0me,54f</Size>
+                <Children>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>2</NumberStates>
+                    <State><Number>0</Number><Text>Start metadata</Text></State>
+                    <State><Number>1</Number><Text>Stop metadata</Text></State>
+                    <Connection><ConfigKey>[Metadata],enabled</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>2</NumberStates>
+                    <State><Number>0</Number><Text>Local only</Text></State>
+                    <State><Number>1</Number><Text>Share with LAN</Text></State>
+                    <Connection><ConfigKey>[Metadata],lan</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                  </PushButton>
+                  <PushButton>
+                    <ObjectName>SidebarButton</ObjectName><Size>0me,52f</Size><NumberStates>3</NumberStates>
+                    <State><Number>0</Number><Text>Metadata off</Text></State>
+                    <State><Number>1</Number><Text>Listening :8794</Text></State>
+                    <State><Number>2</Number><Text>Port unavailable</Text></State>
+                    <Connection><ConfigKey>[Metadata],status</ConfigKey><ConnectValueFromWidget>false</ConnectValueFromWidget></Connection>
+                  </PushButton>
+                </Children>
+              </WidgetGroup>
+              <Label><ObjectName>SettingsRowHint</ObjectName><Text>HTTP :8794/v1/state | Live events :8794/v1/events | LAN sharing exposes track titles to your network.</Text><Size>0me,40f</Size></Label>
+              <Label><ObjectName>SettingsRowHint</ObjectName><Text>Playing + channel fader open selects on-air candidates. Both decks are reported during a mix.</Text><Size>0me,36f</Size></Label>
+              <WidgetGroup><Layout>horizontal</Layout><Size>0me,50f</Size><Children>
+                <PushButton>
+                  <ObjectName>SidebarButton</ObjectName><Size>0me,48f</Size><NumberStates>2</NumberStates>
+                  <State><Number>0</Number><Text>After load: stay here</Text></State>
+                  <State><Number>1</Number><Text>After load: Play view</Text></State>
+                  <Connection><ConfigKey>[PiFlex],return_to_play</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                </PushButton>
+                <PushButton>
+                  <ObjectName>SidebarButton</ObjectName><Size>0me,48f</Size><NumberStates>2</NumberStates>
+                  <State><Number>0</Number><Text>Browse: precise</Text></State>
+                  <State><Number>1</Number><Text>Browse: accelerated</Text></State>
+                  <Connection><ConfigKey>[PiFlex],browse_acceleration</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                </PushButton>
+              </Children></WidgetGroup>
+              <WidgetGroup><Layout>horizontal</Layout><Size>0me,52f</Size><Children>
+                <PushButton>
+                  <ObjectName>SidebarButton</ObjectName><Size>0me,50f</Size><NumberStates>2</NumberStates>
+                  <State><Number>0</Number><Text>Analysis: Rekordbox first</Text></State>
+                  <State><Number>1</Number><Text>Analysis: BiteDJ only</Text></State>
+                  <Connection><ConfigKey>[BiteDJ],analysis_source</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                </PushButton>
+                <PushButton>
+                  <ObjectName>SidebarButton</ObjectName><Size>0me,50f</Size><NumberStates>2</NumberStates>
+                  <State><Number>0</Number><Text>Touch keyboard: off</Text></State>
+                  <State><Number>1</Number><Text>Touch keyboard: auto</Text></State>
+                  <Connection><ConfigKey>[BiteDJ],touch_keyboard</ConfigKey><EmitOnDownPress>true</EmitOnDownPress></Connection>
+                </PushButton>
+              </Children></WidgetGroup>
+              <Label><ObjectName>SettingsRowHint</ObjectName><Text>Analysis changes apply after unloading/reloading. Cues and locked grids stay protected.</Text><Size>0me,32f</Size></Label>
+              <Label><ObjectName>SettingsRowHint</ObjectName><Text>Rekordbox first: use exports, analyze missing data. BiteDJ only: native grid/key/waves, no phrase detector.</Text><Size>0me,32f</Size></Label>
+              <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
+            </Children>
+          </WidgetGroup>
         </Children>
       </WidgetStack>
 

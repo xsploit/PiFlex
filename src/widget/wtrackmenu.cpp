@@ -30,6 +30,7 @@
 #include "library/trackset/crate/cratesummary.h"
 #include "mixer/playerinfo.h"
 #include "mixer/playermanager.h"
+#include "mixer/deckloadpolicy.h"
 #include "moc_wtrackmenu.cpp"
 #include "preferences/colorpalettesettings.h"
 #include "preferences/configobject.h"
@@ -938,27 +939,8 @@ void WTrackMenu::updateMenus() {
             for (int i = 1; i <= iNumDecks; ++i) {
                 // PlayerManager::groupForDeck is 0-indexed.
                 QString deckGroup = PlayerManager::groupForDeck(i - 1);
-                bool deckPlaying = ControlObject::get(
-                                           ConfigKey(deckGroup, "play")) > 0.0;
-                bool allowLoadTrackIntoPlayingDeck = false;
-                if (m_pConfig->exists(kConfigKeyLoadWhenDeckPlaying)) {
-                    int loadWhenDeckPlaying =
-                            m_pConfig->getValueString(kConfigKeyLoadWhenDeckPlaying).toInt();
-                    switch (static_cast<LoadWhenDeckPlaying>(loadWhenDeckPlaying)) {
-                    case LoadWhenDeckPlaying::Allow:
-                    case LoadWhenDeckPlaying::AllowButStopDeck:
-                        allowLoadTrackIntoPlayingDeck = true;
-                        break;
-                    case LoadWhenDeckPlaying::Reject:
-                        break;
-                    }
-                } else {
-                    // support older version of this flag
-                    allowLoadTrackIntoPlayingDeck = m_pConfig->getValue<bool>(
-                            ConfigKey("[Controls]", "AllowTrackLoadToPlayingDeck"));
-                }
                 bool deckEnabled =
-                        (!deckPlaying || allowLoadTrackIntoPlayingDeck) &&
+                        mixxx::deckload::allowed(deckGroup, m_pConfig) &&
                         singleTrackSelected;
                 auto pAction = make_parented<QAction>(tr("Deck %1").arg(i), this);
                 pAction->setEnabled(deckEnabled);

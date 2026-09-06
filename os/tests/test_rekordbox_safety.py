@@ -26,6 +26,7 @@ namespace mixxx::audio { using SampleRate = int; }
 namespace mixxx::rekordbox {
 QList<QPair<QString,bool>> calls;
 bool corruptExt=false;
+QStringList readAnalyzeFiles(TrackPointer, audio::SampleRate, int, const QString&, bool = true);
 void readAnalyze(TrackPointer, audio::SampleRate, int, bool beats, const QString& path) {
     calls.append({path,beats});
     if (corruptExt && path.endsWith("EXT")) throw std::runtime_error("truncated fixture");
@@ -50,10 +51,16 @@ int main(int argc, char** argv) {
     QFile file(dat); assert(file.open(QIODevice::WriteOnly)); file.write("fixture"); file.close();
     assert(readAnalyzeFiles(0,44100,0,dat).isEmpty());
     assert(calls.size()==2 && calls[0]==qMakePair(dat,true) && calls[1]==qMakePair(dat,false));
+    calls.clear();
+    assert(readAnalyzeFiles(0,44100,0,dat,false).isEmpty());
+    assert(calls.size()==1 && calls[0]==qMakePair(dat,false)); // native-only keeps DAT cues
     QFile extended(ext); assert(extended.open(QIODevice::WriteOnly)); extended.write("fixture"); extended.close();
     calls.clear();
     assert(readAnalyzeFiles(0,44100,0,dat).isEmpty());
     assert(calls.size()==2 && calls[0]==qMakePair(dat,true) && calls[1]==qMakePair(ext,false));
+    calls.clear();
+    assert(readAnalyzeFiles(0,44100,0,dat,false).isEmpty());
+    assert(calls.size()==1 && calls[0]==qMakePair(ext,false)); // no imported beat pass
     corruptExt=true;
     auto failed=readAnalyzeFiles(0,44100,0,dat);
     assert(failed==QStringList{ext}); // caught, reported, not silently replaced with old cues

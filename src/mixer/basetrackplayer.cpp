@@ -1,4 +1,5 @@
 #include "mixer/basetrackplayer.h"
+#include "mixer/deckloadpolicy.h"
 
 #include <QMessageBox>
 #include <QMetaMethod>
@@ -514,6 +515,10 @@ void BaseTrackPlayerImpl::disconnectLoadedTrack() {
 }
 
 void BaseTrackPlayerImpl::slotLoadTrack(TrackPointer pNewTrack, bool bPlay) {
+    // Re-check at the mutation boundary, including controller/clone paths.
+    if (pNewTrack && !mixxx::deckload::allowed(getGroup(), m_pConfig)) {
+        return;
+    }
     //qDebug() << "BaseTrackPlayerImpl::slotLoadTrack" << getGroup() << pNewTrack.get();
     // Before loading the track, ensure we have access. This uses lazy
     // evaluation to make sure track isn't NULL before we dereference it.
@@ -638,6 +643,16 @@ void BaseTrackPlayerImpl::slotTrackLoaded(TrackPointer pNewTrack,
         // A track loaded successfully, so clear the dedup guard: if the DJ
         // later returns to a track that fails, they should be alerted again.
         m_pPrevFailedTrackId = TrackId();
+
+        // Navigate only after a successful main-deck load, never on a failed
+        // request, sampler load, preview, or stale asynchronous completion.
+        auto* returnToPlay = ControlObject::getControl(
+                ConfigKey("[PiFlex]", "return_to_play"), ControlFlag::NoWarnIfMissing);
+        if (getGroup().startsWith("[Channel") && (!returnToPlay || returnToPlay->toBool())) {
+            if (auto* overview = ControlObject::getControl(ConfigKey("[Tab]", "overview"))) {
+                overview->set(1.0);
+            }
+        }
 
         // Update the BPM and duration values that are stored in ControlObjects
         m_pDuration->set(m_pLoadedTrack->getDuration());

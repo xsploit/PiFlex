@@ -7,6 +7,7 @@
 #include "moc_track.cpp"
 #include "sources/metadatasource.h"
 #include "track/keyfactory.h"
+#include "track/phrasealignment.h"
 #include "util/assert.h"
 #include "util/logger.h"
 #include "util/time.h"
@@ -454,6 +455,7 @@ bool Track::setBeatsWhileLocked(mixxx::BeatsPointer pBeats) {
     }
 
     m_pBeats = std::move(pBeats);
+    m_phrases = mixxx::alignPhrases(m_sourcePhrases, m_phraseSourceBeats, m_pBeats);
     m_record.refMetadata().refTrackInfo().setBpm(getBeatsPointerBpm(m_pBeats, getDuration()));
     return true;
 }
@@ -519,6 +521,7 @@ void Track::afterBeatsAndBpmUpdated(
 void Track::emitBeatsAndBpmUpdated() {
     emit bpmChanged();
     emit beatsUpdated();
+    emit phrasesUpdated();
 }
 
 void Track::emitChangedSignalsForAllMetadata() {
@@ -941,11 +944,12 @@ mixxx::PhraseList Track::getPhrases() const {
     return m_phrases;
 }
 
-void Track::setPhrases(mixxx::PhraseList phrases) {
+void Track::setPhrases(mixxx::PhraseList phrases, mixxx::BeatsPointer sourceBeats) {
     {
         const auto locked = lockMutex(&m_qMutex);
-        if (m_phrases == phrases) return;
-        m_phrases = std::move(phrases);
+        m_sourcePhrases = std::move(phrases);
+        m_phraseSourceBeats = sourceBeats ? std::move(sourceBeats) : m_pBeats;
+        m_phrases = mixxx::alignPhrases(m_sourcePhrases, m_phraseSourceBeats, m_pBeats);
     }
     // Derived USB metadata is session-local; never dirty the audio tags/cues.
     emit phrasesUpdated();

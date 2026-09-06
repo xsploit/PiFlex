@@ -152,6 +152,8 @@ WaveformMark::WaveformMark(const QString& group,
 
     QString markAlign = context.selectString(node, "Align");
     m_align = decodeAlignmentFlags(markAlign, Qt::AlignBottom | Qt::AlignHCenter);
+    m_labelBottomInset = std::max(0.0, context.selectDouble(node, "LabelBottomInset")) *
+            context.getScaleFactor();
 
     // Hotcue text is set by the cue's label in the database, not by the skin.
     // A skin may still name the slot itself (A-H, and so on); that prefix is
@@ -218,7 +220,8 @@ class MarkerGeometry {
             bool useIcon,
             Qt::Alignment align,
             float breadth,
-            int level) {
+            int level,
+            float bottomInset) {
         // If the label is 1 character long, and this character isn't a letter or a number,
         // we can assume it's a special symbol
         m_isSymbol = !useIcon && label.length() == 1 && !label[0].isLetterOrNumber();
@@ -308,7 +311,7 @@ class MarkerGeometry {
             m_labelRect.moveTop((m_imageSize.height() - m_labelRect.height()) / 2.f);
         } else if (alignV == Qt::AlignBottom) {
             m_labelRect.moveBottom(m_imageSize.height() - 0.5f -
-                    level * increment);
+                    level * increment - std::min(bottomInset, breadth / 3.f));
         } else {
             m_labelRect.moveTop(0.5f + level * increment);
         }
@@ -383,7 +386,8 @@ QImage WaveformMark::generateImage(float devicePixelRatio) {
     const bool useIcon = m_iconPath != "";
 
     // Determine drawing geometries
-    const MarkerGeometry markerGeometry{label, useIcon, m_align, m_breadth, m_level};
+    const MarkerGeometry markerGeometry{
+            label, useIcon, m_align, m_breadth, m_level, m_labelBottomInset};
 
     m_label.setAreaRect(markerGeometry.labelRect());
 

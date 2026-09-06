@@ -126,6 +126,8 @@ bool AnalyzerKey::shouldAnalyze(TrackPointer pTrack) const {
 
     const Keys keys = pTrack->getKeys();
     if (keys.getGlobalKey() != mixxx::track::io::key::INVALID) {
+        // Explicit Rekordbox-first policy outranks generic reanalysis settings.
+        if (keys.getSubVersion() == QStringLiteral("Rekordbox")) return false;
         QString version = keys.getVersion();
         QString subVersion = keys.getSubVersion();
 

@@ -37,6 +37,19 @@ void WPushButton::setup(const QDomNode& node, const SkinContext& context) {
     int iNumStates = context.selectInt(node, "NumberStates");
     setStates(iNumStates);
 
+    // Opt-in momentary adjustments; all other latch/toggle behavior is unchanged.
+    m_repeatEnabled = iNumStates == 1 && context.selectBool(node, "AutoRepeat", false);
+    disconnect(&m_repeatTimer, nullptr, this, nullptr);
+    connect(&m_repeatTimer, &QTimer::timeout, this, [this] {
+        if (!m_bPressed || !isEnabled() || !isVisible()) {
+            m_repeatTimer.stop();
+            return;
+        }
+        m_repeatTimer.setInterval(80);
+        setControlParameterLeftDown(0.0);
+        setControlParameterLeftDown(1.0);
+    });
+
     // Set background pixmap if available
 
     QDomElement backPathNode = context.selectElement(node, "BackPath");
@@ -428,11 +441,18 @@ void WPushButton::mousePressEvent(QMouseEvent * e) {
             }
         }
         setControlParameterLeftDown(emitValue);
+        if (m_repeatEnabled) {
+            m_repeatTimer.start(350);
+        }
         restyleAndRepaint();
     }
 }
 
 bool WPushButton::event(QEvent* e) {
+    if (e->type() == QEvent::Hide || e->type() == QEvent::WindowDeactivate ||
+            e->type() == QEvent::Leave || e->type() == QEvent::EnabledChange) {
+        m_repeatTimer.stop();
+    }
     if (e->type() == QEvent::WindowDeactivate) {
         // if the window is deactivated while in pressed state
         if (m_bPressed) {
@@ -464,6 +484,7 @@ bool WPushButton::event(QEvent* e) {
 }
 
 void WPushButton::focusOutEvent(QFocusEvent* e) {
+    m_repeatTimer.stop();
     if (m_bPressed && e->reason() != Qt::MouseFocusReason) {
         // Since we support multi touch there is no reason to reset
         // the pressed flag if the Primary touch point is moved to an
@@ -475,6 +496,7 @@ void WPushButton::focusOutEvent(QFocusEvent* e) {
 }
 
 void WPushButton::mouseReleaseEvent(QMouseEvent * e) {
+    m_repeatTimer.stop();
     const bool leftClick = e->button() == Qt::LeftButton;
     const bool rightClick = e->button() == Qt::RightButton;
 

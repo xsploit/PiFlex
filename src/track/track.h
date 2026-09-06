@@ -287,7 +287,7 @@ class Track : public QObject {
     ConstWaveformPointer getWaveformSummary() const;
     void setWaveformSummary(ConstWaveformPointer pWaveform);
     mixxx::PhraseList getPhrases() const;
-    void setPhrases(mixxx::PhraseList phrases);
+    void setPhrases(mixxx::PhraseList phrases, mixxx::BeatsPointer sourceBeats = {});
 
     /// Get the track's main cue point
     mixxx::audio::FramePos getMainCuePosition() const;
@@ -581,6 +581,8 @@ class Track : public QObject {
     ConstWaveformPointer m_waveform;
     ConstWaveformPointer m_waveformSummary;
     mixxx::PhraseList m_phrases;
+    mixxx::PhraseList m_sourcePhrases;
+    mixxx::BeatsPointer m_phraseSourceBeats;
 
     mixxx::BeatsImporterPointer m_pBeatsImporterPending;
     std::unique_ptr<mixxx::CueInfoImporter> m_pCueInfoImporterPending;

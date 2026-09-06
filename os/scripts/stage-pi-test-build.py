@@ -34,7 +34,7 @@ def ssh(command):
 def digest(data):
     return hashlib.sha256(data.replace(b'\r\n', b'\n')).hexdigest()
 
-files = sorted(set(git('diff', '--name-only', '--', 'src', 'res').decode().splitlines()
+files = sorted(set(git('diff', '--name-only', '--', 'src', 'res', 'CMakeLists.txt').decode().splitlines()
                    + git('ls-files', '--others', '--exclude-standard', '--', 'src').decode().splitlines()))
 if not files:
     raise SystemExit('No native changes to stage.')

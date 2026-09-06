@@ -1,6 +1,11 @@
 #include "mixer/playermanager.h"
 
 #include <QRegularExpression>
+#include <QJsonArray>
+#include <QDateTime>
+#include "control/controlpushbutton.h"
+#include "mixer/deckloadpolicy.h"
+#include "mixer/livemetadataserver.h"
 
 #include "audio/types.h"
 #include "control/controlobject.h"
@@ -140,6 +145,59 @@ PlayerManager::PlayerManager(UserSettingsPointer pConfig,
     m_pSamplerBank = new SamplerBank(m_pConfig, this);
 
     m_cloneTimer.start();
+    m_metadataServer = std::make_unique<LiveMetadataServer>([this] { return metadataSnapshot(); });
+    m_metadataEnabled = std::make_unique<ControlPushButton>(ConfigKey("[Metadata]", "enabled"));
+    m_metadataLan = std::make_unique<ControlPushButton>(ConfigKey("[Metadata]", "lan"));
+    m_metadataStatus = std::make_unique<ControlObject>(ConfigKey("[Metadata]", "status"));
+    m_metadataStatus->setReadOnly();
+    m_metadataEnabled->setButtonMode(ControlPushButton::TOGGLE);
+    m_metadataLan->setButtonMode(ControlPushButton::TOGGLE);
+    // Network publishing is opt-in each launch, not an accidental boot service.
+    m_metadataEnabled->set(0.0);
+    m_metadataLan->set(m_pConfig->getValue(ConfigKey("[Metadata]", "lan"), false));
+    connect(m_metadataEnabled.get(), &ControlObject::valueChanged, this, [this](double) { configureMetadata(); });
+    connect(m_metadataLan.get(), &ControlObject::valueChanged, this, [this](double) { configureMetadata(); });
+    configureMetadata();
+}
+
+void PlayerManager::configureMetadata() {
+    const bool enabled = m_metadataEnabled->toBool();
+    const bool lan = m_metadataLan->toBool();
+    m_pConfig->setValue(ConfigKey("[Metadata]", "lan"), lan);
+    m_metadataServer->stop();
+    m_metadataStatus->forceSet(enabled
+            ? (m_metadataServer->start(lan ? QHostAddress::AnyIPv4 : QHostAddress::LocalHost, 8794) ? 1 : 2)
+            : 0);
+}
+
+QJsonObject PlayerManager::metadataSnapshot() const {
+    QJsonArray decks;
+    QJsonArray onAir;
+    for (const auto* deck : m_decks) {
+        const auto group = deck->getGroup();
+        const auto track = deck->getLoadedTrack();
+        const auto read = [&group](const char* key) { return ControlObject::get(ConfigKey(group, key)); };
+        const bool playing = read("play") > 0.0;
+        const double fader = read("volume");
+        const bool channelOpen = util_isfinite(fader) && fader > 0.0001 && read("main_mix") > 0.0;
+        const bool active = track && playing && channelOpen;
+        QJsonObject item{{"group", group}, {"loaded", bool(track)}, {"playing", playing},
+                {"channel_fader", fader}, {"main_mix", read("main_mix") > 0.0},
+                {"on_air_candidate", active}, {"bpm", read("bpm")},
+                {"rate_ratio", read("rate_ratio")}};
+        if (track) {
+            item.insert("title", track->getTitle());
+            item.insert("artist", track->getArtist());
+            item.insert("key", track->getKeyText());
+            item.insert("duration_seconds", track->getDuration());
+            item.insert("position_seconds", read("playposition") * track->getDuration());
+        }
+        decks.append(item);
+        if (active) { onAir.append(group); }
+    }
+    return QJsonObject{{"version", 1}, {"timestamp_ms", QDateTime::currentMSecsSinceEpoch()},
+            {"decks", decks}, {"on_air_candidates", onAir},
+            {"selection_rule", "playing with channel fader open and main mix routed; crossfader not evaluated"}};
 }
 
 PlayerManager::~PlayerManager() {
@@ -387,6 +445,16 @@ void PlayerManager::addDeckInner() {
 
     m_players[handleGroup.handle()] = pDeck;
     m_decks.append(pDeck);
+    connect(pDeck, &BaseTrackPlayer::newTrackLoaded, m_metadataServer.get(),
+            [this](TrackPointer) { m_metadataServer->changed(); });
+    connect(pDeck, &BaseTrackPlayer::playerEmpty, m_metadataServer.get(),
+            [this] { m_metadataServer->changed(); });
+    for (const char* key : {"play", "volume", "main_mix", "bpm", "rate_ratio"}) {
+        if (auto* control = ControlObject::getControl(ConfigKey(pDeck->getGroup(), key))) {
+            connect(control, &ControlObject::valueChanged, m_metadataServer.get(),
+                    [this](double) { m_metadataServer->changed(); });
+        }
+    }
 
     // Register the deck output with SoundManager.
     m_pSoundManager->registerOutput(
@@ -698,6 +766,7 @@ void PlayerManager::slotLoadLocationToPlayerMaybePlay(
     switch (loadWhenDeckPlaying) {
     case LoadWhenDeckPlaying::AllowButStopDeck:
     case LoadWhenDeckPlaying::Reject:
+    case LoadWhenDeckPlaying::AllowIfChannelClosed:
         break;
     case LoadWhenDeckPlaying::Allow:
         if (ControlObject::get(ConfigKey(group, "play")) > 0.0) {

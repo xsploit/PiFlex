@@ -21,11 +21,13 @@ source = r'''
 #include <limits>
 #include "library/rekordbox/rekordboxphrases.h"
 #include "waveform/renderers/phrasestrip.h"
+#include "track/beats.h"
 using namespace mixxx;
 using namespace mixxx::rekordbox;
 struct TestTrack {
     PhraseList phrases;
-    void setPhrases(PhraseList value) { phrases=std::move(value); }
+    void setPhrases(PhraseList value, BeatsPointer = {}) { phrases=std::move(value); }
+    audio::SampleRate getSampleRate() const { return audio::SampleRate(48000); }
     double getDuration() const { return 3; }
 };
 using TrackPointer=std::shared_ptr<TestTrack>;
@@ -142,9 +144,13 @@ int main(int argc,char** argv) {
 with tempfile.TemporaryDirectory(prefix='pflx-phrase-test-') as directory:
     cpp=Path(directory)/'test.cpp'; cpp.write_text(source)
     binary=Path(directory)/'test'
-    flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','--libs','Qt6Core','Qt6Gui'],text=True))
+    subprocess.run(['protoc','-I'+str(ROOT/'src'),'--cpp_out='+directory,
+                    str(ROOT/'src/proto/beats.proto')],check=True)
+    flags=shlex.split(subprocess.check_output(['pkg-config','--cflags','--libs','Qt6Core','Qt6Gui','protobuf'],text=True))
     subprocess.run(['c++','-std=c++20','-fPIC','-O2','-ffast-math','-DKS_STR_ENCODING_NONE',
+        '-ffunction-sections','-fdata-sections','-Wl,--gc-sections', '-I'+directory,
         '-I'+str(ROOT/'src'),'-I'+str(ROOT/'lib/rekordbox-metadata'),'-I'+str(ROOT/'lib/kaitai'),
+        str(ROOT/'src/track/beats.cpp'),str(ROOT/'src/track/bpm.cpp'),str(Path(directory)/'proto/beats.pb.cc'),
         str(cpp),str(ROOT/'lib/rekordbox-metadata/rekordbox_anlz.cpp'),
         str(ROOT/'lib/kaitai/kaitai/kaitaistream.cpp'),fpclassify_object(directory),'-lz','-o',str(binary),*flags],check=True)
     subprocess.run([str(binary)],check=True,timeout=15,env={**os.environ,'QT_QPA_PLATFORM':'offscreen'})

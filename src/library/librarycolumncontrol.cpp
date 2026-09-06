@@ -304,10 +304,27 @@ void LibraryColumnControl::applyAllToHeader(WTrackTableViewHeader* pHeader) {
     // Compute integer pixel widths proportional to weight, with the last
     // visible column absorbing any rounding remainder so widths sum exactly
     // to availableWidth.
+    // Reserve font-aware widths for BPM/key; leave flexible space to titles.
+    int compactWidth = 0;
+    int flexibleWeight = totalWeight;
+    const auto compactPixels = [pHeader](const Resolved& r) {
+        const auto& name = r.pCol->name;
+        if (name != LIBRARYTABLE_BPM && name != LIBRARYTABLE_KEY) {
+            return 0;
+        }
+        const QString sample = name == LIBRARYTABLE_BPM ? QStringLiteral("000.00") : QStringLiteral("12B");
+        return std::max(56, pHeader->fontMetrics().horizontalAdvance(sample) + 24) * r.weight;
+    };
+    for (const auto& r : resolved) {
+        if (r.visible && compactPixels(r) > 0) {
+            compactWidth += compactPixels(r);
+            flexibleWeight -= r.weight;
+        }
+    }
     int assignedSoFar = 0;
     int lastVisibleIdxInResolved = -1;
     for (size_t i = 0; i < resolved.size(); ++i) {
-        if (resolved[i].visible) {
+        if (resolved[i].visible && compactPixels(resolved[i]) == 0) {
             lastVisibleIdxInResolved = static_cast<int>(i);
         }
     }
@@ -317,16 +334,18 @@ void LibraryColumnControl::applyAllToHeader(WTrackTableViewHeader* pHeader) {
             continue;
         }
         int px;
-        if (static_cast<int>(i) == lastVisibleIdxInResolved) {
-            px = availableWidth - assignedSoFar;
+        if (compactPixels(r) > 0) {
+            px = compactPixels(r);
+        } else if (static_cast<int>(i) == lastVisibleIdxInResolved) {
+            px = availableWidth - compactWidth - assignedSoFar;
         } else {
-            px = (availableWidth * r.weight) / totalWeight;
+            px = ((availableWidth - compactWidth) * r.weight) / std::max(1, flexibleWeight);
         }
         const int minPx = minSectionPxForColumn(r.pCol->name);
         if (px < minPx) {
             px = minPx;
         }
-        if (static_cast<int>(i) != lastVisibleIdxInResolved) {
+        if (compactPixels(r) == 0 && static_cast<int>(i) != lastVisibleIdxInResolved) {
             assignedSoFar += px;
         }
         pHeader->resizeSection(r.li, px);

@@ -15,6 +15,7 @@
 #include "library/trackcollection.h"
 #include "library/trackcollectionmanager.h"
 #include "mixer/playermanager.h"
+#include "mixer/deckloadpolicy.h"
 #include "moc_wtracktableview.cpp"
 #include "preferences/colorpalettesettings.h"
 #include "preferences/dialog/dlgprefdeck.h"
@@ -1380,29 +1381,7 @@ void WTrackTableView::loadSelectedTrackToGroup(const QString& group, bool play) 
     if (indices.isEmpty()) {
         return;
     }
-    bool allowLoadTrackIntoPlayingDeck = false;
-    if (m_pConfig->exists(kConfigKeyLoadWhenDeckPlaying)) {
-        int loadWhenDeckPlaying =
-                m_pConfig->getValueString(kConfigKeyLoadWhenDeckPlaying).toInt();
-        switch (static_cast<LoadWhenDeckPlaying>(loadWhenDeckPlaying)) {
-        case LoadWhenDeckPlaying::Allow:
-        case LoadWhenDeckPlaying::AllowButStopDeck:
-            allowLoadTrackIntoPlayingDeck = true;
-            break;
-        case LoadWhenDeckPlaying::Reject:
-            break;
-        }
-    } else {
-        // support older version of this flag
-        allowLoadTrackIntoPlayingDeck =
-                m_pConfig->getValue<bool>(kConfigKeyAllowTrackLoadToPlayingDeck);
-    }
-    // If the track load override is disabled, check to see if a track is
-    // playing before trying to load it.
-    // Always load to preview deck.
-    if (!allowLoadTrackIntoPlayingDeck &&
-            !PlayerManager::isPreviewDeckGroup(group) &&
-            ControlObject::get(ConfigKey(group, "play")) > 0.0) {
+    if (!mixxx::deckload::allowed(group, m_pConfig)) {
         return;
     }
     auto index = indices.at(0);

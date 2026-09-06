@@ -35,7 +35,8 @@ void readAnalyze(TrackPointer track,
 QStringList readAnalyzeFiles(TrackPointer track,
         audio::SampleRate sampleRate,
         int timingOffset,
-        const QString& anlzPath);
+        const QString& anlzPath,
+        bool importBeats = true);
 
 } // namespace rekordbox
 } // namespace mixxx

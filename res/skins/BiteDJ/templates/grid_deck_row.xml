@@ -3,7 +3,7 @@
   <WidgetGroup>
     <ObjectName>GridPanel_DeckBlock</ObjectName>
     <Layout>vertical</Layout>
-    <Size>0me,116f</Size>
+    <Size>0me,140f</Size>
     <Children>
       <Label>
         <ObjectName>GridPanel_DeckLabel_<Variable name="channel"/></ObjectName>
@@ -15,11 +15,12 @@
       <WidgetGroup>
         <ObjectName>GridPanel_ButtonRow</ObjectName>
         <Layout>horizontal</Layout>
-        <Size>0me,42f</Size>
+        <Size>0me,54f</Size>
         <Children>
           <PushButton>
             <ObjectName>GridPanel_Button</ObjectName>
-            <Size>0me,42f</Size>
+            <Size>0me,54f</Size>
+            <AutoRepeat>true</AutoRepeat>
             <NumberStates>1</NumberStates>
             <State><Number>0</Number><Text>&#9664;</Text></State>
             <Connection>
@@ -30,7 +31,7 @@
           </PushButton>
           <PushButton>
             <ObjectName>GridPanel_SetButton</ObjectName>
-            <Size>0me,42f</Size>
+            <Size>0me,54f</Size>
             <NumberStates>1</NumberStates>
             <State><Number>0</Number><Text>Set</Text></State>
             <Connection>
@@ -41,7 +42,8 @@
           </PushButton>
           <PushButton>
             <ObjectName>GridPanel_Button</ObjectName>
-            <Size>0me,42f</Size>
+            <Size>0me,54f</Size>
+            <AutoRepeat>true</AutoRepeat>
             <NumberStates>1</NumberStates>
             <State><Number>0</Number><Text>&#9654;</Text></State>
             <Connection>
@@ -56,11 +58,12 @@
       <WidgetGroup>
         <ObjectName>GridPanel_ButtonRow</ObjectName>
         <Layout>horizontal</Layout>
-        <Size>0me,42f</Size>
+        <Size>0me,54f</Size>
         <Children>
           <PushButton>
             <ObjectName>GridPanel_Button</ObjectName>
-            <Size>0me,42f</Size>
+            <Size>0me,54f</Size>
+            <AutoRepeat>true</AutoRepeat>
             <NumberStates>1</NumberStates>
             <State><Number>0</Number><Text>BPM -</Text></State>
             <Connection>
@@ -71,7 +74,8 @@
           </PushButton>
           <PushButton>
             <ObjectName>GridPanel_Button</ObjectName>
-            <Size>0me,42f</Size>
+            <Size>0me,54f</Size>
+            <AutoRepeat>true</AutoRepeat>
             <NumberStates>1</NumberStates>
             <State><Number>0</Number><Text>BPM +</Text></State>
             <Connection>

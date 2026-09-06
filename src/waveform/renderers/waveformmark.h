@@ -165,6 +165,7 @@ class WaveformMark {
     QString m_text;
     QString m_hotcuePrefix;
     Qt::Alignment m_align;
+    float m_labelBottomInset = 0.f;
     QString m_pixmapPath;
     QString m_iconPath;
 

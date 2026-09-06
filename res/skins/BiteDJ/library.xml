@@ -18,6 +18,10 @@
               <Transform><Not/></Transform>
             </Connection>
             <Children>
+              <SearchBox>
+                <ObjectName>SearchBox</ObjectName>
+                <Size>240me,40f</Size>
+              </SearchBox>
               <LibraryBreadcrumb>
                 <ObjectName>LibraryBreadcrumb</ObjectName>
                 <SizePolicy>me,me</SizePolicy>

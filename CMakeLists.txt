@@ -728,6 +728,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/mixer/microphone.cpp
   src/mixer/playerinfo.cpp
   src/mixer/playermanager.cpp
+  src/mixer/livemetadataserver.cpp
   src/mixer/previewdeck.cpp
   src/mixer/sampler.cpp
   src/mixer/samplerbank.cpp

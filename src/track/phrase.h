@@ -5,7 +5,8 @@
 
 namespace mixxx {
 
-// Read-only source analysis, independent of cue slots and editable beatgrids.
+// Source analysis is independent of cue slots. Track retains an immutable
+// imported copy and projects the displayed copy when its beatgrid is edited.
 // Seconds are in the decoded audio timebase, after the importer timing offset.
 struct Phrase {
     enum class Kind { Unknown, Intro, Verse, Bridge, Chorus, Up, Down, Outro };

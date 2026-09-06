@@ -99,6 +99,7 @@ class DlgPreferences : public QDialog, public Ui::DlgPreferencesDlg {
     QStringList m_geometry;
     UserSettingsPointer m_pConfig;
     PreferencesPage m_soundPage;
+    std::unique_ptr<ControlPushButton> m_pOpenBroadcast;
     DlgPrefControllers* m_pControllersDlg;
 
     QSize m_pageSizeHint;

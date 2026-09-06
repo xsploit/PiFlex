@@ -27,6 +27,9 @@ class Sampler;
 class SamplerBank;
 class SoundManager;
 class ControlProxy;
+class ControlPushButton;
+class LiveMetadataServer;
+class QJsonObject;
 
 // For mocking PlayerManager
 class PlayerManagerInterface : public QObject {
@@ -244,6 +247,12 @@ class PlayerManager : public PlayerManagerInterface {
     void trackAnalyzerIdle();
 
   private:
+    QJsonObject metadataSnapshot() const;
+    void configureMetadata();
+    std::unique_ptr<LiveMetadataServer> m_metadataServer;
+    std::unique_ptr<ControlPushButton> m_metadataEnabled;
+    std::unique_ptr<ControlPushButton> m_metadataLan;
+    std::unique_ptr<ControlObject> m_metadataStatus;
     TrackPointer lookupTrack(QString location);
     // True if any deck/sampler/preview deck currently holds the given track.
     // Used to avoid cancelling analysis of a replaced track that is still

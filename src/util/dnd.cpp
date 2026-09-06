@@ -3,6 +3,7 @@
 #include "control/controlobject.h"
 #include "library/parser.h"
 #include "mixer/playermanager.h"
+#include "mixer/deckloadpolicy.h"
 #include "preferences/dialog/dlgprefdeck.h"
 #include "sources/soundsourceproxy.h"
 #include "track/track.h"
@@ -70,34 +71,7 @@ QList<mixxx::FileInfo> dropEventFiles(
 bool allowLoadToPlayer(
         const QString& group,
         UserSettingsPointer pConfig) {
-    // Always allow loads to preview decks
-    if (PlayerManager::isPreviewDeckGroup(group)) {
-        return true;
-    }
-
-    // Allow if deck is not playing
-    if (ControlObject::get(ConfigKey(group, "play")) <= 0.0) {
-        return true;
-    }
-
-    bool allowLoadTrackIntoPlayingDeck = false;
-    if (pConfig->exists(kConfigKeyLoadWhenDeckPlaying)) {
-        int loadWhenDeckPlaying =
-                pConfig->getValueString(kConfigKeyLoadWhenDeckPlaying).toInt();
-        switch (static_cast<LoadWhenDeckPlaying>(loadWhenDeckPlaying)) {
-        case LoadWhenDeckPlaying::Allow:
-        case LoadWhenDeckPlaying::AllowButStopDeck:
-            allowLoadTrackIntoPlayingDeck = true;
-            break;
-        case LoadWhenDeckPlaying::Reject:
-            break;
-        }
-    } else {
-        // support older version of this flag
-        allowLoadTrackIntoPlayingDeck =
-                pConfig->getValue<bool>(kConfigKeyAllowTrackLoadToPlayingDeck);
-    }
-    return allowLoadTrackIntoPlayingDeck;
+    return mixxx::deckload::allowed(group, pConfig);
 }
 
 // Helper function for DragAndDropHelper::mousePressed and DragAndDropHelper::mouseMoveInitiatesDrag

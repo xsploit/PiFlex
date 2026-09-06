@@ -15,6 +15,8 @@
             <attribute persist="true" config_key="[PiFlex],time_mode2">1</attribute>
             <attribute persist="true" config_key="[PiFlex],time_mode3">1</attribute>
             <attribute persist="true" config_key="[PiFlex],time_mode4">1</attribute>
+            <attribute persist="true" config_key="[PiFlex],return_to_play">1</attribute>
+            <attribute persist="true" config_key="[PiFlex],browse_acceleration">1</attribute>
 			<attribute persist="true" config_key="[Master],skin_settings">0</attribute>
 			<attribute persist="true" config_key="[Skin],show_microphones">0</attribute>
 			<attribute persist="true" config_key="[VinylControl],show_vinylcontrol">0</attribute>

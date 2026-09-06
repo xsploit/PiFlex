@@ -56,6 +56,7 @@
 #include "waveform/waveformwidgetfactory.h"
 #include "widget/wglwidget.h"
 #include "widget/wmainmenubar.h"
+#include "widget/touchkeyboard.h"
 
 #ifdef __VINYLCONTROL__
 #include "vinylcontrol/vinylcontrolmanager.h"
@@ -172,6 +173,7 @@ void MixxxMainWindow::initialize() {
     m_pCoreServices->getControlIndicatorTimer()->setLegacyVsyncEnabled(true);
 
     UserSettingsPointer pConfig = m_pCoreServices->getSettings();
+    new TouchKeyboard(pConfig, this);
 
     // Bite DJ: tooltips are globally disabled regardless of the
     // [Controls],Tooltips setting; the unit is touch-only and tooltips just

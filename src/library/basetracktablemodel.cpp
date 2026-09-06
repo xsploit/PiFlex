@@ -859,6 +859,8 @@ QVariant BaseTrackTableModel::roleValue(
     case Qt::TextAlignmentRole: {
         switch (field) {
         case ColumnCache::COLUMN_LIBRARYTABLE_BPM:
+        case ColumnCache::COLUMN_LIBRARYTABLE_KEY:
+            return static_cast<int>(Qt::AlignVCenter | Qt::AlignHCenter);
         case ColumnCache::COLUMN_LIBRARYTABLE_DURATION:
         case ColumnCache::COLUMN_LIBRARYTABLE_BITRATE:
         case ColumnCache::COLUMN_LIBRARYTABLE_TRACKNUMBER: {

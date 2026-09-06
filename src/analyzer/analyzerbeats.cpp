@@ -259,7 +259,9 @@ bool AnalyzerBeats::shouldAnalyze(TrackPointer pTrack) const {
 
     QString subVersion = pBeats->getSubVersion();
     if (subVersion == mixxx::rekordboxconstants::beatsSubversion) {
-        return m_bPreferencesReanalyzeImported;
+        // Native-only removes the imported grid at the import boundary.
+        // A retained Rekordbox grid is authoritative (including user edits).
+        return false;
     }
 
     if (subVersion.isEmpty() && pBeats->firstBeat() <= mixxx::audio::kStartFramePos &&

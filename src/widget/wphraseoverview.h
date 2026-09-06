@@ -29,7 +29,7 @@ class WPhraseOverview final : public WWidget {
         painter.fillRect(rect(), Qt::black);
         if (!m_track) return;
         mixxx::paintPhraseStrip(painter, m_track->getPhrases(),
-                rect().adjusted(1, int(2 * m_scale), -1, 0), Qt::Horizontal,
+                rect().adjusted(0, int(2 * m_scale), 0, 0), Qt::Horizontal,
                 0, m_track->getDuration(), m_scale, true);
     }
 

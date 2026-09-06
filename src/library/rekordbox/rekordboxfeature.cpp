@@ -32,6 +32,7 @@
 #include "library/trackcollectionmanager.h"
 #include "library/treeitem.h"
 #include "moc_rekordboxfeature.cpp"
+#include "mixer/playerinfo.h"
 #include "notifications/notifications.h"
 #include "track/beats.h"
 #include "track/cue.h"
@@ -1061,7 +1062,15 @@ QString readPhrases(TrackPointer track, int timingOffset, const QString& anlzPat
         auto imported = decodePhrases(*phrases, times, track->getDuration(), timingOffset,
                 finalBoundary, &ignoredFills);
         if (ignoredFills) qWarning() << "Ignored out-of-range Rekordbox phrase fills:" << ignoredFills << extPath;
-        track->setPhrases(std::move(imported));
+        // Anchor to the export, not a possibly locked/edited current grid.
+        QVector<mixxx::audio::FramePos> sourcePositions;
+        const auto sampleRate = track->getSampleRate();
+        for (double milliseconds : times) {
+            sourcePositions.append(mixxx::audio::FramePos(
+                    std::max(1.0, milliseconds - timingOffset) * sampleRate / 1000.0));
+        }
+        auto sourceBeats = mixxx::Beats::fromBeatPositions(sampleRate, sourcePositions);
+        track->setPhrases(std::move(imported), std::move(sourceBeats));
         return {};
     } catch (const std::exception& error) {
         qWarning() << "Could not import Rekordbox phrases:" << extPath << error.what();
@@ -1155,7 +1164,8 @@ QString readThreeBandWaveforms(TrackPointer track,
 QStringList readAnalyzeFiles(TrackPointer track,
         mixxx::audio::SampleRate sampleRate,
         int timingOffset,
-        const QString& anlzPath) {
+        const QString& anlzPath,
+        bool importBeats) {
     QStringList failedPaths;
     const auto importFile = [&](const QString& filePath, bool beatsOnly) {
         try {
@@ -1171,7 +1181,7 @@ QStringList readAnalyzeFiles(TrackPointer track,
         }
     };
     // DAT-only exports still need BOTH passes: beats first, then cues.
-    importFile(anlzPath, true);
+    if (importBeats) importFile(anlzPath, true);
     const QString extPath = anlzPath.left(anlzPath.length() - 3) + "EXT";
     importFile(QFileInfo::exists(extPath) ? extPath : anlzPath, false);
     failedPaths.removeDuplicates();
@@ -1621,6 +1631,37 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
         return track;
     }
 
+    // Browsing/previewing a row can resolve the same Track already on a deck.
+    // Never reimport its grid, cues or analysis underneath a live player.
+    if (PlayerInfo::instance().isTrackLoaded(track)) {
+        return track;
+    }
+    const bool rekordboxFirst = m_pTrackCollectionManager->config()->getValue<int>(
+            ConfigKey("[BiteDJ]", "analysis_source"), 0) != 1;
+    if (!rekordboxFirst) {
+        // Remove only imported artifacts; retain native caches and BPM locks.
+        const auto beats = track->getBeats();
+        if (beats && (beats->getSubVersion() == mixxx::rekordboxconstants::beatsSubversion ||
+                             (beats->getSubVersion().isEmpty() &&
+                                     beats->firstBeat() <= mixxx::audio::kStartFramePos))) {
+            track->trySetBeats({});
+        }
+        const auto waveform = track->getWaveform();
+        if (waveform && waveform->getVersion().startsWith("Rekordbox")) {
+            track->setWaveform({});
+        }
+        const auto summary = track->getWaveformSummary();
+        if (summary && summary->getVersion().startsWith("Rekordbox")) {
+            track->setWaveformSummary({});
+        }
+        const auto keys = track->getKeys();
+        // Old imports had no subversion; native analyzer keys do have one.
+        if (keys.getSubVersion().isEmpty() || keys.getSubVersion() == "Rekordbox") {
+            track->setKeys(Keys());
+        }
+        track->setPhrases({});
+    }
+
     // getTrack() hands back the very same Track a deck may already be playing,
     // and readAnalyze() below rewrites its cues from the ANLZ file. Store any
     // cue the DJ has set since the track was loaded before that happens, or
@@ -1679,11 +1720,13 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
     mixxx::audio::SampleRate sampleRate = track->getSampleRate();
 
     auto failedAnalysis = mixxx::rekordbox::readAnalyzeFiles(
-            track, sampleRate, timingOffset, anlzPath);
-    const auto failedPhrases = mixxx::rekordbox::readPhrases(track, timingOffset, anlzPath);
+            track, sampleRate, timingOffset, anlzPath, rekordboxFirst);
+    const auto failedPhrases = rekordboxFirst
+            ? mixxx::rekordbox::readPhrases(track, timingOffset, anlzPath) : QString();
     if (!failedPhrases.isEmpty()) failedAnalysis.append(failedPhrases);
-    const auto failedWaveform = mixxx::rekordbox::readThreeBandWaveforms(
-            track, sampleRate, timingOffset, anlzPath);
+    const auto failedWaveform = rekordboxFirst
+            ? mixxx::rekordbox::readThreeBandWaveforms(
+                      track, sampleRate, timingOffset, anlzPath) : QString();
     if (!failedWaveform.isEmpty()) {
         failedAnalysis.append(failedWaveform);
     }
@@ -1712,12 +1755,24 @@ TrackPointer RekordboxPlaylistModel::getTrack(const QModelIndex& index) const {
     // Earlier versions allow any format
     // Decision: We normalize the KeyText here to not write garbage to the
     // file metadata and it is unlikely to loose extra info.
-    track->setKeys(KeyFactory::makeBasicKeysNormalized(
+    auto importedKeys = KeyFactory::makeBasicKeysNormalized(
             getFieldVariant(index, ColumnCache::COLUMN_LIBRARYTABLE_KEY).toString(),
-            mixxx::track::io::key::USER));
+            mixxx::track::io::key::USER);
+    if (rekordboxFirst && importedKeys.getGlobalKey() != mixxx::track::io::key::INVALID) {
+        importedKeys.setSubVersion(QStringLiteral("Rekordbox"));
+        track->setKeys(importedKeys);
+    }
 
     track->setColor(mixxx::RgbColor::fromQVariant(
             getFieldVariant(index, ColumnCache::COLUMN_LIBRARYTABLE_COLOR)));
+
+    const auto resolvedBeats = track->getBeats();
+    const auto resolvedWaveform = track->getWaveform();
+    qInfo() << "Rekordbox import policy:" << (rekordboxFirst ? "Rekordbox first" : "BiteDJ only")
+            << "grid:" << (resolvedBeats ? resolvedBeats->getSubVersion() : "native pending")
+            << "waveform:" << (resolvedWaveform ? resolvedWaveform->getVersion() : "native pending")
+            << "key:" << track->getKeys().getSubVersion()
+            << "phrases:" << track->getPhrases().size();
 
     return track;
 }

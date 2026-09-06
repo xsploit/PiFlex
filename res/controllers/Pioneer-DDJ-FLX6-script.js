@@ -1003,6 +1003,10 @@ PioneerDDJFLX6.cycleTempoRange = function(_channel, _control, value, _status, gr
 //
 
 PioneerDDJFLX6.jogTurn = function(channel, _control, value, _status, group) {
+    if (PioneerDDJFLX6.shiftButtonDown[channel]) {
+        PioneerDDJFLX6.jogSearch(channel, _control, value, _status, group);
+        return;
+    }
     const deckNum = channel + 1;
     // wheel center at 64; <64 rew >64 fwd
     let newVal = value - 64;
@@ -1286,9 +1290,15 @@ PioneerDDJFLX6.mergeEffectSelectorPressedReverse = function(channel, _control, v
     }
 };
 
-PioneerDDJFLX6.jogSearch = function(_channel, _control, value, _status, group) {
-    const newVal = (value - 64) * PioneerDDJFLX6.fastSeekScale;
-    engine.setValue(group, "jog", newVal);
+PioneerDDJFLX6.gridJogResidual = [0, 0, 0, 0];
+PioneerDDJFLX6.jogSearch = function(channel, _control, value, _status, group) {
+    // Replaces the shifted fast-seek binding. Accumulate small jog ticks so
+    // a gentle turn can align the grid without moving playback or scratching.
+    if (channel < 0 || channel > 3 || engine.getValue(group, "track_loaded") <= 0) { return; }
+    var total = PioneerDDJFLX6.gridJogResidual[channel] + (value - 64) / 16;
+    var steps = Math.trunc(total);
+    PioneerDDJFLX6.gridJogResidual[channel] = total - steps;
+    if (steps) { engine.setValue(group, "beats_translate_move", steps); }
 };
 
 PioneerDDJFLX6.jogTouch = function(channel, _control, value, _status, group) {
@@ -1299,8 +1309,7 @@ PioneerDDJFLX6.jogTouch = function(channel, _control, value, _status, group) {
         return;
     }
 
-    // SHIFT+jog is mapped to fast search. Do not enable the scratch engine at
-    // the same time or the deck can remain held at scratch speed after seeking.
+    // SHIFT+jog edits the grid only; touching it must not engage scratch.
     if (PioneerDDJFLX6.shiftButtonDown[channel]) {
         if (value === 0 && engine.isScratching(deckNum)) {
             engine.scratchDisable(deckNum, false);
@@ -1328,6 +1337,29 @@ PioneerDDJFLX6.jogTouch = function(channel, _control, value, _status, group) {
 
 PioneerDDJFLX6.shiftPressed = function(channel, _control, value, _status, _group) {
     PioneerDDJFLX6.shiftButtonDown[channel] = value === 0x7F;
+    PioneerDDJFLX6.gridJogResidual[channel] = 0;
+    if (value === 0x7F && engine.isScratching(channel + 1)) {
+        engine.scratchDisable(channel + 1, false);
+    }
+};
+
+PioneerDDJFLX6.lastBrowseTime = 0;
+PioneerDDJFLX6.lastBrowseDirection = 0;
+PioneerDDJFLX6.browseRotate = function(_channel, _control, value) {
+    var delta = value < 64 ? value : value - 128;
+    if (!delta) { return; }
+    var now = Date.now();
+    var gap = now - PioneerDDJFLX6.lastBrowseTime;
+    var direction = delta > 0 ? 1 : -1;
+    var multiplier = direction === PioneerDDJFLX6.lastBrowseDirection && gap < 50 ? 10 :
+        direction === PioneerDDJFLX6.lastBrowseDirection && gap < 100 ? 4 : 1;
+    // Keep sidebar/menu navigation precise; accelerate only a visible track list.
+    if (engine.getValue("[PiFlex]", "browse_acceleration") < 0.5 ||
+            engine.getValue("[Sidebar]", "sidebar_visible") > 0.5 ||
+            engine.getValue("[Tab]", "library") < 0.5) { multiplier = 1; }
+    PioneerDDJFLX6.lastBrowseTime = now;
+    PioneerDDJFLX6.lastBrowseDirection = direction;
+    engine.setValue("[Library]", "MoveVertical", Math.max(-100, Math.min(100, delta * multiplier)));
 };
 
 

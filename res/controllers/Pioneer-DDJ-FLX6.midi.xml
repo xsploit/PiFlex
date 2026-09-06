@@ -2541,7 +2541,7 @@
             <control>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX6.jogSearch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK1) - rotate - Search (Fast Pitch bend)</description>
+                <description>JOG DIAL PLATTER +SHIFT (DECK1) - rotate - Fine beatgrid alignment</description>
                 <status>0xB0</status>
                 <midino>0x29</midino>
                 <options>
@@ -2551,7 +2551,7 @@
             <control>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX6.jogSearch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK2) - rotate - Search (Fast Pitch bend)</description>
+                <description>JOG DIAL PLATTER +SHIFT (DECK2) - rotate - Fine beatgrid alignment</description>
                 <status>0xB1</status>
                 <midino>0x29</midino>
                 <options>
@@ -2561,7 +2561,7 @@
             <control>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX6.jogSearch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK3) - rotate - Search (Fast Pitch bend)</description>
+                <description>JOG DIAL PLATTER +SHIFT (DECK3) - rotate - Fine beatgrid alignment</description>
                 <status>0xB2</status>
                 <midino>0x29</midino>
                 <options>
@@ -2571,7 +2571,7 @@
             <control>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX6.jogSearch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK4) - rotate - Search (Fast Pitch bend)</description>
+                <description>JOG DIAL PLATTER +SHIFT (DECK4) - rotate - Fine beatgrid alignment</description>
                 <status>0xB3</status>
                 <midino>0x29</midino>
                 <options>
@@ -3708,12 +3708,12 @@
             </control>
             <control>
                 <group>[Library]</group>
-                <key>MoveVertical</key>
-                <description>BROWSE - rotate - Scroll tracklist/tree view</description>
+                <key>PioneerDDJFLX6.browseRotate</key>
+                <description>BROWSE - accelerated track-list scrolling</description>
                 <status>0xB6</status>
                 <midino>0x40</midino>
                 <options>
-                    <selectknob/>
+                    <script-binding/>
                 </options>
             </control>
             <control>
@@ -5149,9 +5149,7 @@
             <control>
                 <group>[Channel1]</group>
                 <key>PioneerDDJFLX6.jogTouch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK1) - touch - enable (on touch) / disable
-                    (on release) highspeed
-                    Pitch bend
+                <description>JOG DIAL PLATTER +SHIFT (DECK1) - touch - suppress scratching during beatgrid alignment
                 </description>
                 <status>0x90</status>
                 <midino>0x67</midino>
@@ -5162,9 +5160,7 @@
             <control>
                 <group>[Channel2]</group>
                 <key>PioneerDDJFLX6.jogTouch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK2) - touch - enable (on touch) / disable
-                    (on release) highspeed
-                    Pitch bend
+                <description>JOG DIAL PLATTER +SHIFT (DECK2) - touch - suppress scratching during beatgrid alignment
                 </description>
                 <status>0x91</status>
                 <midino>0x67</midino>
@@ -5175,9 +5171,7 @@
             <control>
                 <group>[Channel3]</group>
                 <key>PioneerDDJFLX6.jogTouch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK3) - touch - enable (on touch) / disable
-                    (on release) highspeed
-                    Pitch bend
+                <description>JOG DIAL PLATTER +SHIFT (DECK3) - touch - suppress scratching during beatgrid alignment
                 </description>
                 <status>0x92</status>
                 <midino>0x67</midino>
@@ -5188,9 +5182,7 @@
             <control>
                 <group>[Channel4]</group>
                 <key>PioneerDDJFLX6.jogTouch</key>
-                <description>JOG DIAL PLATTER +SHIFT (DECK4) - touch - enable (on touch) / disable
-                    (on release) highspeed
-                    Pitch bend
+                <description>JOG DIAL PLATTER +SHIFT (DECK4) - touch - suppress scratching during beatgrid alignment
                 </description>
                 <status>0x93</status>
                 <midino>0x67</midino>

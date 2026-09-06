@@ -112,6 +112,8 @@ class WPushButton : public WWidget {
     ControlPushButton::ButtonMode m_leftButtonMode;
     ControlPushButton::ButtonMode m_rightButtonMode;
     QTimer m_clickTimer;
+    QTimer m_repeatTimer;
+    bool m_repeatEnabled = false;
     QVector<int> m_align;
 
     // Animates long press latching by storing the off state of the

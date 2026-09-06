@@ -47,14 +47,15 @@ enum class KeyunlockMode {
 enum class LoadWhenDeckPlaying {
     Reject,
     Allow,
-    AllowButStopDeck
+    AllowButStopDeck,
+    AllowIfChannelClosed
 };
 
 namespace {
 const ConfigKey kConfigKeyLoadWhenDeckPlaying = ConfigKey("[Controls]", "LoadWhenDeckPlaying");
 const ConfigKey kConfigKeyAllowTrackLoadToPlayingDeck =
         ConfigKey("[Controls]", "AllowTrackLoadToPlayingDeck");
-constexpr LoadWhenDeckPlaying kDefaultLoadWhenDeckPlaying = LoadWhenDeckPlaying::Reject;
+constexpr LoadWhenDeckPlaying kDefaultLoadWhenDeckPlaying = LoadWhenDeckPlaying::AllowIfChannelClosed;
 } // namespace
 
 class DlgPrefDeck : public DlgPreferencePage, public Ui::DlgPrefDeckDlg  {

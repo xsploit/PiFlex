@@ -399,6 +399,9 @@ void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
     }
     case Qt::Key_Enter:
     case Qt::Key_Return: {
+        // Search submission must never turn into track activation. In
+        // particular, a virtual keyboard may repeat Return while held.
+        keyEvent->accept();
         if (slotClearSearchIfClearButtonHasFocus()) {
             return;
         }
@@ -411,12 +414,9 @@ void WSearchLineEdit::keyPressEvent(QKeyEvent* keyEvent) {
         if (findCurrentTextIndex() == -1) {
             slotSaveSearch();
         }
-        // Jump to tracks if search signal was already emitted
-        if (!m_queryEmitted) {
-            slotTriggerSearch();
-        } else {
-            emit setLibraryFocus(FocusWidget::TracksTable);
-        }
+        // Keep focus in search even when the debounced query already ran.
+        // Selecting/loading a result is a separate user action.
+        slotTriggerSearch();
         return;
     }
     case Qt::Key_Space:

@@ -239,6 +239,8 @@ class SystemSettings : public QObject {
     // 1 loads while continuing playback, and 2 stops the deck before loading.
     // Existing Mixxx load paths read this config key directly.
     std::unique_ptr<ControlObject> m_pCoLoadWhenDeckPlaying;
+    std::unique_ptr<ControlObject> m_pCoAnalysisSource;
+    std::unique_ptr<ControlObject> m_pCoTouchKeyboard;
     // [BiteDJ],screen_rotation — display rotation in degrees (0 or 180).
     std::unique_ptr<ControlObject> m_pCoScreenRotation;
     // Emitted from the controller thread; the queued connection hops the eject

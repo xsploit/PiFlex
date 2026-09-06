@@ -99,6 +99,7 @@ const QString kLegacyAllowTrackLoadToPlayingDeckKey =
 constexpr double kLoadWhenDeckPlayingReject = 0.0;
 constexpr double kLoadWhenDeckPlayingAllow = 1.0;
 constexpr double kLoadWhenDeckPlayingAllowButStop = 2.0;
+constexpr double kLoadWhenDeckPlayingChannelClosed = 3.0;
 
 // Mixxx track-time display mode stored in mixxx.cfg:
 // 0 = elapsed, 1 = remaining, 2 = elapsed and remaining.
@@ -249,14 +250,17 @@ SystemSettings::SystemSettings(UserSettingsPointer pConfig,
     const ConfigKey loadWhenDeckPlayingKey(kControlsGroup, kLoadWhenDeckPlayingKey);
     const ConfigKey legacyAllowTrackLoadKey(
             kControlsGroup, kLegacyAllowTrackLoadToPlayingDeckKey);
-    const double legacyDefault = m_pConfig->getValue(legacyAllowTrackLoadKey, false)
+    const double legacyDefault = !m_pConfig->exists(legacyAllowTrackLoadKey)
+            ? kLoadWhenDeckPlayingChannelClosed
+            : m_pConfig->getValue(legacyAllowTrackLoadKey, false)
             ? kLoadWhenDeckPlayingAllow
             : kLoadWhenDeckPlayingReject;
     double loadWhenDeckPlaying =
             m_pConfig->getValue(loadWhenDeckPlayingKey, legacyDefault);
     if (loadWhenDeckPlaying != kLoadWhenDeckPlayingReject &&
             loadWhenDeckPlaying != kLoadWhenDeckPlayingAllow &&
-            loadWhenDeckPlaying != kLoadWhenDeckPlayingAllowButStop) {
+            loadWhenDeckPlaying != kLoadWhenDeckPlayingAllowButStop &&
+            loadWhenDeckPlaying != kLoadWhenDeckPlayingChannelClosed) {
         loadWhenDeckPlaying = kLoadWhenDeckPlayingReject;
     }
     m_pCoLoadWhenDeckPlaying =
@@ -270,6 +274,19 @@ SystemSettings::SystemSettings(UserSettingsPointer pConfig,
     // Screen rotation in degrees, 0 or 180 (System settings tab).
     const ConfigKey screenRotationKey(kBiteDj, QStringLiteral("screen_rotation"));
     m_pCoScreenRotation = std::make_unique<ControlObject>(screenRotationKey);
+    const auto bindBinaryPreference = [this](std::unique_ptr<ControlObject>& control,
+                                             const char* name, int defaultValue) {
+        const ConfigKey key(kBiteDj, QString::fromLatin1(name));
+        auto button = std::make_unique<ControlPushButton>(key);
+        button->setButtonMode(ControlPushButton::TOGGLE);
+        button->setStates(2);
+        control = std::move(button);
+        control->set(m_pConfig->getValue<int>(key, defaultValue) == 1 ? 1 : 0);
+        connect(control.get(), &ControlObject::valueChanged, this,
+                [this, key](double value) { m_pConfig->setValue(key, value == 1 ? 1 : 0); });
+    };
+    bindBinaryPreference(m_pCoAnalysisSource, "analysis_source", 0);
+    bindBinaryPreference(m_pCoTouchKeyboard, "touch_keyboard", 1);
     m_pCoScreenRotation->set(m_pConfig->getValue(screenRotationKey, 0.0));
     connect(m_pCoScreenRotation.get(),
             &ControlObject::valueChanged,
@@ -974,7 +991,8 @@ void SystemSettings::onLoadWhenDeckPlayingChanged(double value) {
     // a malformed skin or config cannot silently disable deck protection.
     if (value != kLoadWhenDeckPlayingReject &&
             value != kLoadWhenDeckPlayingAllow &&
-            value != kLoadWhenDeckPlayingAllowButStop) {
+            value != kLoadWhenDeckPlayingAllowButStop &&
+            value != kLoadWhenDeckPlayingChannelClosed) {
         value = kLoadWhenDeckPlayingReject;
         m_pCoLoadWhenDeckPlaying->set(value);
     }

@@ -32,6 +32,10 @@ Rekordbox prepared analysis, EDMC downloads, and appliance management.
 The inventory below covers the current source; see [Release status](#release-status)
 for verification and deployment requirements.
 
+The latest [live workflow and metadata controls](docs/live-workflow.md) cover
+fader-safe track replacement, return-to-Play loading, hold-to-repeat grid edits,
+and independently switchable audio broadcasting and track metadata for visuals.
+
 Jump to: [Display](#display-skins-and-waveform-layout) ·
 [FX/key/grid](#fx-key-and-beatgrid-controls) ·
 [FLX6](#flx6-mapping-and-jog-response) ·
@@ -113,8 +117,10 @@ Sources: [overview panels](res/skins/BiteDJ/effects.xml),
 - **Shift + Browse zooms both decks together**.
 - **Jog release resumes playback immediately** when the deck was playing before
   touch, without the old scratch-release ramp leaving it apparently stopped.
-- **Shift + jog search avoids simultaneously enabling scratch**, preventing
-  a seek from leaving the deck held by the scratch engine.
+- **Shift + jog adjusts beatgrid alignment**, replacing fast search without
+  seeking playback or enabling scratch. Shift + Browse remains linked zoom.
+- Optional **accelerated browsing** gives larger steps when the browse encoder
+  turns quickly; slow turns, direction changes and sidebar navigation stay precise.
 - Configurable **jog-wheel smoothing/filter length** in the service preferences,
   persisted as `JogWheelFilterLength` (default 6, bounded to 1-64).
 - Rotary-filter state handling fixes and a dedicated regression test.
@@ -224,6 +230,14 @@ Sources and test details: [companion](edmc-companion/README.md),
   waveform height without changing audio amplitude or pumping gain per window.
 - **PSSI phrase analysis**, including masked/unmasked data, labels/colors,
   variable-tempo beat-to-time conversion, and source timing offsets.
+- Analysis preference: **Rekordbox first** (default) imports available grids,
+  keys, phrases and supported waveforms; enabled native analyzers fill missing
+  data. **BiteDJ only** retains exported cues but uses native grid/key/waveforms.
+  Switches apply after unloading/reloading, never to a currently loaded deck.
+  Locked grids stay protected; native phrase detection is not implemented.
+- Cue badges overlay the top of the scrolling waveform, independently of the
+  phrase timeline. Phrase display follows beatgrid edits from an immutable
+  source grid, so nudges/undo do not accumulate timing drift.
 - Opaque phrase row below the full-track overview; lower translucent phrase
   overlay on the scrolling waveform, with optional fill indication there.
 - QPainter and OpenGL drawing paths, with cached GL label textures and clipping
@@ -242,6 +256,15 @@ and rendering are PiFlex presentations, not Pioneer firmware emulation.
 
 See [Rekordbox read compatibility](docs/rekordbox-read-compatibility.md)
 for format coverage and test commands.
+
+On the Pi's Wayland session, **Touch keyboard: auto** opens the installed
+`wvkbd-mobintl` keyboard for editable search, text, password and numeric fields.
+It is event-driven and can be disabled in Stream settings. These analysis,
+cue-layout and keyboard changes are installed on the development Pi.
+Enter/Return keeps focus in the search field, including repeated presses, so
+submitting a query does not accidentally load the selected track.
+Search keyboard interaction and cue placement were checked live; see
+[live workflow](docs/live-workflow.md) for completed and remaining checks.
 
 ### OS integration, deployment, and recovery additions
 

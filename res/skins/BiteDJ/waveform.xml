@@ -145,6 +145,7 @@
         <SignalHighColor>#f6e9d3</SignalHighColor>
         <DefaultMark>
           <Align>bottom|right</Align>
+          <LabelBottomInset>18</LabelBottomInset>
           <Color>#FF0000</Color>
           <TextColor>#FFFFFF</TextColor>
          <Text> %1 </Text>
@@ -154,7 +155,8 @@
           <Text>CUE</Text>
           <Color>#ff6000</Color>
           <TextColor>#ff6000</TextColor>
-          <Align>bottom</Align>
+          <!-- Overlay above the waveform; never a segment of the phrase row. -->
+          <Align>top|left</Align>
         </Mark>
         <!-- Hot cue bank (slots 1-8 = rekordbox pads A-H). <Hotcue> binds the
              end position and type as well as the position, so saved loops draw
@@ -226,6 +228,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>18</Hotcue>
@@ -233,6 +236,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>19</Hotcue>
@@ -240,6 +244,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>20</Hotcue>
@@ -247,6 +252,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>21</Hotcue>
@@ -254,6 +260,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>22</Hotcue>
@@ -261,6 +268,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>23</Hotcue>
@@ -268,6 +276,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>24</Hotcue>
@@ -275,6 +284,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>25</Hotcue>
@@ -282,6 +292,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
         <Mark>
           <Hotcue>26</Hotcue>
@@ -289,6 +300,7 @@
           <Color>#9aa0a6</Color>
           <TextColor>#9aa0a6</TextColor>
           <Align>bottom</Align>
+          <LabelBottomInset>18</LabelBottomInset>
         </Mark>
 
         <Mark>
