@@ -1,5 +1,7 @@
 #include "widget/wnumberpos.h"
 
+#include <QMouseEvent>
+
 #include "control/controlproxy.h"
 #include <QMouseEvent>
 #include "skin/legacy/skincontext.h"
