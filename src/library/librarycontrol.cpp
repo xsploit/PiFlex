@@ -35,19 +35,6 @@ bool bitedj_isLibraryPageActive() {
             ControlFlag::NoWarnIfMissing);
     return !pCo || pCo->get() > 0.0;
 }
-
-void bitedj_showPlayPage() {
-    ControlObject* pLibraryTab = ControlObject::getControl(
-            ConfigKey(QStringLiteral("[Tab]"), QStringLiteral("library")),
-            ControlFlag::NoWarnIfMissing);
-    if (!pLibraryTab) {
-        return;
-    }
-    ControlObject::set(
-            ConfigKey(QStringLiteral("[Tab]"), QStringLiteral("current")), 0.0);
-    ControlObject::set(
-            ConfigKey(QStringLiteral("[Tab]"), QStringLiteral("overview")), 1.0);
-}
 } // namespace
 
 LoadToGroupController::LoadToGroupController(LibraryControl* pParent, const QString& group)
@@ -634,26 +621,8 @@ void LibraryControl::slotLoadSelectedTrackToGroup(const QString& group, bool pla
     }
 
     WTrackTableView* pTrackTableView = m_pLibraryWidget->getCurrentTrackTableView();
-    if (!pTrackTableView) {
-        return;
-    }
-
-    // Return to the Play page only after a track load has been accepted. Since
-    // loadSelectedTrackToGroup() returns void, observe loadTrackToPlayer, which
-    // is emitted only after the table's load guards have passed. A successful
-    // emission returns to Play; otherwise the Browser remains open.
-    bool loadRequested = false;
-    const auto loadConnection = connect(
-            pTrackTableView,
-            &WTrackTableView::loadTrackToPlayer,
-            this,
-            [&loadRequested] { loadRequested = true; },
-            Qt::DirectConnection);
-    pTrackTableView->loadSelectedTrackToGroup(group, play);
-    disconnect(loadConnection);
-
-    if (loadRequested) {
-        bitedj_showPlayPage();
+    if (pTrackTableView) {
+        pTrackTableView->loadSelectedTrackToGroup(group, play);
     }
 }
 
@@ -1012,22 +981,20 @@ void LibraryControl::slotMoveFocusBackward(double v) {
 }
 
 void LibraryControl::slotMoveFocus(double v) {
-    if (m_focusedWidget == FocusWidget::Sidebar) {
-        if (v > 0) {
+    // Backward focus and other contexts (dialogs, search box) keep stock
+    // Tab/BackTab semantics.
+    if (v > 0) {
+        if (m_focusedWidget == FocusWidget::Sidebar) {
             slotGoToItem(1);
             return;
         }
-    } else if (m_focusedWidget == FocusWidget::TracksTable) {
-        if (v < 0) {
+        if (m_focusedWidget == FocusWidget::TracksTable) {
             ControlObject::set(ConfigKey(QStringLiteral("[Sidebar]"),
                                        QStringLiteral("sidebar_visible")),
                     1);
+            return;
         }
-        // A track is activated with LOAD, not by pressing the browse encoder.
-        return;
     }
-
-    // Other contexts (dialogs, search box) keep stock Tab/BackTab semantics.
     // Don't use Key_Tab + ShiftModifier for moving focus backwards!
     // This would indeed move the focus, though it has a significant side-effect
     // compared to pressing Shift + Tab on a real keyboard:

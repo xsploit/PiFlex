@@ -133,26 +133,6 @@
                 <Elide>scroll</Elide>
                 <Channel><Variable name="channel"/></Channel>
               </TrackProperty>
-              <WidgetGroup>
-                <ObjectName>DeckHeaderTime</ObjectName>
-                <Layout>horizontal</Layout>
-                <Size>100max,20f</Size>
-                <Children>
-                  <NumberPos>
-                    <ObjectName>DeckHeaderTimeValue</ObjectName>
-                    <Size>100max,20f</Size>
-                    <TooltipId>track_time</TooltipId>
-                    <NumberOfDigits>6</NumberOfDigits>
-                    <TabularNumbers>true</TabularNumbers>
-                    <Channel><Variable name="channel"/></Channel>
-                  </NumberPos>
-                </Children>
-                <Connection>
-                  <ConfigKey>[Tab],overview</ConfigKey>
-                  <BindProperty>visible</BindProperty>
-                  <Transform><Not/></Transform>
-                </Connection>
-              </WidgetGroup>
             </Children>
           </WidgetGroup>
         </Children>
@@ -256,44 +236,11 @@
             <Layout>vertical</Layout>
             <Size>0me,0me</Size>
             <Children>
-              <WidgetGroup>
+              <Label>
                 <ObjectName>DeckTrackTimeTitle</ObjectName>
+                <Text>Time</Text>
                 <Size>200me,25f</Size>
-                <Layout>horizontal</Layout>
-                <Children>
-                  <Label>
-                    <ObjectName>DeckTrackTimeRemainLabel</ObjectName>
-                    <Text>REMAIN</Text>
-                    <Connection>
-                      <ConfigKey>[Controls],ShowDurationRemaining</ConfigKey>
-                      <Transform>
-                        <IsEqual>0</IsEqual>
-                        <Not/>
-                      </Transform>
-                      <BindProperty>highlight</BindProperty>
-                    </Connection>
-                  </Label>
-                  <Label>
-                    <ObjectName>DeckTrackTimeSlashLabel</ObjectName>
-                    <Text>/</Text>
-                  </Label>
-                  <Label>
-                    <ObjectName>DeckTrackTimeTimeLabel</ObjectName>
-                    <Text>TIME</Text>
-                    <Connection>
-                      <ConfigKey>[Controls],ShowDurationRemaining</ConfigKey>
-                      <Transform>
-                        <IsEqual>1</IsEqual>
-                        <Not/>
-                      </Transform>
-                      <BindProperty>highlight</BindProperty>
-                    </Connection>
-                  </Label>
-                  <Label>
-                    <Size>0me,0me</Size>
-                  </Label>
-                </Children>
-              </WidgetGroup>
+              </Label>
               <WidgetGroup>
                 <ObjectName>DeckTrackTimeWrapper</ObjectName>
                 <Layout>horizontal</Layout>
@@ -313,13 +260,11 @@
                             <ObjectName>DeckTrackTimeMini</ObjectName>
                             <MaximumSize>150,-1</MaximumSize>
                             <Text>0:00.00</Text>
-                            <TabularNumbers>true</TabularNumbers>
                           </Label>
                           <Label>
                             <ObjectName>DeckTrackTime</ObjectName>
                             <MinimumSize>150,-1</MinimumSize>
                             <Text>0:00.00</Text>
-                            <TabularNumbers>true</TabularNumbers>
                           </Label>
                         </Children>
                       </SizeAwareStack>
@@ -342,7 +287,6 @@
                             <MaximumSize>150,-1</MaximumSize>
                             <TooltipId>track_time_deck</TooltipId>
                             <NumberOfDigits>6</NumberOfDigits>
-                            <TabularNumbers>true</TabularNumbers>
                             <Channel><Variable name="channel"/></Channel>
                           </NumberPos>
                           <NumberPos>
@@ -351,7 +295,6 @@
                             <MinimumSize>150,-1</MinimumSize>
                             <TooltipId>track_time_deck</TooltipId>
                             <NumberOfDigits>6</NumberOfDigits>
-                            <TabularNumbers>true</TabularNumbers>
                             <Channel><Variable name="channel"/></Channel>
                           </NumberPos>
                         </Children>
@@ -370,7 +313,7 @@
             <ObjectName>TrackBPMRangeContainer</ObjectName>
             <Layout>vertical</Layout>
             <Size>65max,40max</Size>
-            <Children>
+            <Children>              
               <WidgetGroup>
                 <ObjectName>DeckBPMRangePercent</ObjectName>
                 <Size>30me,16f</Size>
@@ -673,6 +616,15 @@
             </MarkRange>
             <Connection>
               <ConfigKey>[Channel<Variable name="channel"/>],playposition</ConfigKey>
+            </Connection>
+            <!-- The watermark is off on the Play page, where the scrolling
+                 waveform and the Time readout already carry the countdown.
+                 Kept next to the connection above because setupConnections
+                 walks siblings from the first <Connection> on. -->
+            <Connection>
+              <ConfigKey>[Tab],overview</ConfigKey>
+              <BindProperty>timeRemainingVisible</BindProperty>
+              <Transform><Not/></Transform>
             </Connection>
           </Overview>
         </Children>

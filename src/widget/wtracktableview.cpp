@@ -272,11 +272,15 @@ void WTrackTableView::loadTrackModel(QAbstractItemModel* pNewModel, bool restore
 
     setModel(pNewModel);
     setHorizontalHeader(header);
-    // Use Qt's drag reordering and the upstream per-model header state.
-    // BiteDJ's weighted widths still own resizing; Fixed permits the
-    // programmatic resizeSection() calls made by LibraryColumnControl.
+    // Bite DJ fork: when LibraryColumnControl owns column visibility +
+    // widths, also lock the order and disable user drag-resize. Reorders
+    // wouldn't survive restart (we no longer save the per-model protobuf)
+    // and drag-resize would silently get clobbered by the next flex-weight
+    // re-apply on header resize — both are confusing transient UX. Fixed
+    // resize mode still permits programmatic resizeSection(), which is
+    // what LibraryColumnControl::applyTo uses.
     const bool columnControlActive = LibraryColumnControl::tryInstance() != nullptr;
-    header->setSectionsMovable(true);
+    header->setSectionsMovable(!columnControlActive);
     if (columnControlActive) {
         header->setSectionResizeMode(QHeaderView::Fixed);
     }
