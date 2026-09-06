@@ -261,7 +261,14 @@ unsigned int EffectSlot::numParameters(
 }
 
 void EffectSlot::setEnabled(bool enabled) {
+    if (m_pControlEnabled->toBool() == enabled) {
+        return;
+    }
     m_pControlEnabled->set(enabled);
+    // ControlObject suppresses valueChanged for changes originating from itself.
+    // Programmatic callers (notably Pad FX) therefore must explicitly publish
+    // the state to DSP; the control's signal only covers external writers.
+    updateEngineState();
 }
 
 EffectParameterSlotBasePointer EffectSlot::getEffectParameterSlot(

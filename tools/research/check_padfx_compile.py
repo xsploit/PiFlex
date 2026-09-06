@@ -53,7 +53,7 @@ for name, template in [
             cleaned.insert(1, '-I' + moc_dir)
         subprocess.run(cleaned, cwd=entry['directory'], check=True)
 
-if any(option in sys.argv for option in ('--audio', '--settings', '--skin')):
+if any(option in sys.argv for option in ('--audio', '--settings', '--skin', '--routing')):
     entry = next(c for c in commands if c['file'].endswith('/src/effects/backends/builtin/echoeffect.cpp'))
     old_root = entry['file'][:-len('/src/effects/backends/builtin/echoeffect.cpp')]
     args = shlex.split(entry['command'].replace(old_root, str(root)))
@@ -79,6 +79,8 @@ if any(option in sys.argv for option in ('--audio', '--settings', '--skin')):
     libraries += shlex.split(subprocess.check_output(['pkg-config', '--libs', 'Qt6Test'], text=True))
     with tempfile.TemporaryDirectory(prefix='piflex-padfx-test-') as temp:
         cases = []
+        if '--routing' in sys.argv:
+            cases.append(('routing', 'src/effects/effectslot.cpp', 'os/tests/padfx_routing_test.cpp'))
         if '--audio' in sys.argv:
             cases.append(('echo', 'src/effects/backends/builtin/echoeffect.cpp', 'os/tests/padecho_audio_test.cpp'))
         if '--settings' in sys.argv:

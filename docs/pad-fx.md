@@ -132,7 +132,21 @@ Results on the local WSL build dependencies:
   add-dry path, which the Reverb lanes use. The surrounding engine has been
   syntax-checked, not sanitizer-tested end-to-end.
 
-The earlier editor build was compiled for ARM64 and installed on the development
-Pi. Physical FLX6
-press/release and jog interaction, listening A/B with Rekordbox, and Pi sustained
-CPU/memory/xrun testing remain acceptance checks.
+### Physical-pad investigation (2026-09-06)
+
+Live ALSA capture confirmed normal-bank pads 1–8 transmit notes 16–23 on MIDI
+channels 7 and 9 (zero-based), including releases, matching both deck mappings.
+An integration test then exposed a separate audio-routing defect:
+`EffectSlot::setEnabled()` changed its own ControlObject without publishing to
+DSP. Self-originated ControlObject writes suppress `valueChanged`, so the
+already-loaded private effects stayed bypassed while the transport brake worked.
+The setter now explicitly updates the engine when its value changes.
+
+`check_padfx_compile.py <build> --harness-only --routing` runs the real
+ControlObject → PadEffectChain → EffectSlot → EngineEffectsManager path with
+generated audio, without opening an audio device or touching a DJ profile.
+Before the fix, bypass/enabled/released energy was 624/624/624; after the fix,
+it was 624/0.00646588/624 for an 8 kHz tone through a 500 Hz low-pass filter.
+The test asserts both activation and release, beyond the separate UI, mapping
+and DSP-unit tests. Listening A/B with Rekordbox, remaining physical Shift/jog
+interactions, and sustained Pi CPU/memory/xrun testing remain acceptance checks.
