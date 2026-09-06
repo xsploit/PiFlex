@@ -148,7 +148,9 @@ Sources: [overview panels](res/skins/BiteDJ/effects.xml),
   approximate, not Rekordbox DSP. Local controller and Echo DSP tests pass;
   Pi performance and physical-pad listening checks are still required.
   See [Pad FX implementation and validation](docs/pad-fx.md).
-- **Pad FX settings editor**: per-deck normal/Shift assignments, an Off slot,
+- **Eight-pad FX settings grid**: a large 4×2 layout with direct assignment
+  dropdowns, labeled effect-family colors, separate deck and Normal/Shift bank
+  selectors, and reset on each pad. Includes an Off slot,
   bounded Echo/delay beat overrides, five native-strength levels, momentary or
   toggle Release Echo, selected-pad reset, and an all-deck Pad FX stop. Choices
   are saved separately from user effect-rack presets. Held pads keep their

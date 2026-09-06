@@ -25,8 +25,11 @@ Crush uses 10 bits and 0.45 downsampling. These require listening calibration.
 
 ### Saved editor
 
-Open **Settings → Pad FX** and choose deck and normal/Shift pad. Values cycle
-on tap. The panel scrolls when the screen is too small, rather than increasing
+Open **Settings → Pad FX** and choose the deck and Normal or Shift bank. Eight
+large pad cards follow the controller's 4×2 layout. Each has direct dropdowns
+for assignment, timing, strength and Release Echo behavior, plus its own reset.
+Effect families use labeled color accents, rather than making every pad blue.
+The panel scrolls when the screen is too small, rather than increasing
 the minimum size of the rest of the skin.
 
 - Assignment: the 16 native presets listed above, plus Off.
@@ -120,16 +123,16 @@ Results on the local WSL build dependencies:
   real disk round-trip, repeatable selected-slot reset and preservation of
   unknown future namespaces. Validation uses `util_isfinite`, because the
   release build's fast-math flags invalidate ordinary inline `std::isfinite`.
-- Native UI parsing/click tests pass for the panel trigger, eight controls,
-  repeated stop/reset actions and small-window scrolling. The rendered panel
-  was inspected; fixed value containers prevent the stylesheet from shrinking
-  value buttons to 80 pixels and clipping their text.
+- The native grid test exercises actual dropdowns across all 64 assignments,
+  deck/bank isolation, reset, external control updates, contextual timing/hold
+  options, repeated emergency stop and small-window scrolling.
 - Current native Echo DSP passes impulse tail/decay, dry gate/restore, finite
   output and output guard checks at 44.1/48 kHz and 32/256/1024-frame buffers.
 - Corrected an existing `<= numSamples` loop to `< numSamples` in the shared
   add-dry path, which the Reverb lanes use. The surrounding engine has been
   syntax-checked, not sanitizer-tested end-to-end.
 
-Still required: full application build and engine routing test, physical FLX6
+The earlier editor build was compiled for ARM64 and installed on the development
+Pi. Physical FLX6
 press/release and jog interaction, listening A/B with Rekordbox, and Pi sustained
-CPU/memory/xrun testing. The Pi has not been contacted or updated for this work.
+CPU/memory/xrun testing remain acceptance checks.

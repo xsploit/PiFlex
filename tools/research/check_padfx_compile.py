@@ -8,6 +8,8 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import os
+import shutil
 
 root = pathlib.Path(__file__).resolve().parents[2]
 build = pathlib.Path(sys.argv[1])
@@ -65,9 +67,16 @@ if any(option in sys.argv for option in ('--audio', '--settings', '--skin')):
             flags.append(args[i])
         i += 1
     # Reuse dependency libraries only; compile the current Echo and harness.
-    lines = subprocess.check_output(['ninja', '-t', 'commands', 'mixxx'], cwd=build, text=True).splitlines()
-    link = shlex.split(lines[-1])
-    libraries = link[link.index('libmixxx-lib.a'):link.index('&&', link.index('libmixxx-lib.a'))]
+    make_link = build / 'CMakeFiles/mixxx.dir/link.txt'
+    if make_link.exists():
+        link = shlex.split(make_link.read_text())
+        libraries = link[link.index('libmixxx-lib.a'):]
+    else:
+        lines = subprocess.check_output(['ninja', '-t', 'commands', 'mixxx'], cwd=build, text=True).splitlines()
+        link = shlex.split(lines[-1])
+        libraries = link[link.index('libmixxx-lib.a'):link.index('&&', link.index('libmixxx-lib.a'))]
+    flags += shlex.split(subprocess.check_output(['pkg-config', '--cflags', 'Qt6Test'], text=True))
+    libraries += shlex.split(subprocess.check_output(['pkg-config', '--libs', 'Qt6Test'], text=True))
     with tempfile.TemporaryDirectory(prefix='piflex-padfx-test-') as temp:
         cases = []
         if '--audio' in sys.argv:
@@ -78,13 +87,22 @@ if any(option in sys.argv for option in ('--audio', '--settings', '--skin')):
             cases.append(('skin', 'src/preferences/padfxsettings.cpp', 'os/tests/padfx_skin_test.cpp'))
         for label, source, harness in cases:
             executable = pathlib.Path(temp) / (label + '-test')
-            subprocess.run([args[0], *flags, str(root / source), str(root / harness),
+            extra_sources = [str(root / 'src/skin/legacy/legacyskinparser.cpp')] if label == 'skin' else []
+            if label == 'skin':
+                subprocess.run(['/usr/lib/qt6/libexec/moc', *[f for f in flags if f.startswith('-D')],
+                                '-I' + str(root / 'src'), str(root / 'src/skin/legacy/legacyskinparser.h'),
+                                '-o', str(pathlib.Path(temp) / 'moc_legacyskinparser.cpp')], check=True)
+            subprocess.run([args[0], '-I' + temp, *flags, *extra_sources, str(root / source), str(root / harness),
                             '-o', str(executable), *libraries], cwd=build, check=True)
             if label == 'skin':
                 output = []
                 if '--screenshot' in sys.argv:
                     output = [sys.argv[sys.argv.index('--screenshot') + 1]]
                 debugger = ['gdb', '-batch', '-ex', 'run', '-ex', 'bt', '--args'] if '--gdb' in sys.argv else []
-                subprocess.run(['xvfb-run', '-a', *debugger, str(executable), str(root), *output], cwd=build, check=True)
+                display = ['xvfb-run', '-a'] if shutil.which('xvfb-run') else []
+                env = os.environ.copy()
+                if not display:
+                    env['QT_QPA_PLATFORM'] = 'offscreen'
+                subprocess.run([*display, *debugger, str(executable), str(root), *output], cwd=build, env=env, check=True)
             else:
                 subprocess.run([str(executable)], cwd=build, check=True)
