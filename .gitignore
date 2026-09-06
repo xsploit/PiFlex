@@ -73,6 +73,10 @@ res/qrc_mixxx.cc
 /os/assets/
 /os/dist/
 /os/config/piflex-os.yaml
+/artifacts/
+/piflex-*.png
+# Scratch uv invocation generated this empty lock; no uv project is maintained.
+/uv.lock
 *.img
 *.img.zst
 *.tar.gz

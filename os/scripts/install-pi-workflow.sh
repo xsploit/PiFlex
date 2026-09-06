@@ -45,11 +45,11 @@ tar -tzf "$backup/profile-workflow.tgz" >/dev/null
 changed=1
 sudo install -m 0755 "$binary" /usr/local/bin/mixxx.workflow-next
 cmp "$binary" /usr/local/bin/mixxx.workflow-next
-for relative in controllers/Pioneer-DDJ-FLX6-script.js controllers/Pioneer-DDJ-FLX6.midi.xml skins/BiteDJ/library.xml skins/BiteDJ/settings.xml skins/BiteDJ/skin.xml skins/BiteDJ/waveform.xml skins/BiteDJ/templates/grid_deck_row.xml; do
+for relative in controllers/piflex-padfx.js controllers/Pioneer-DDJ-FLX6-script.js controllers/Pioneer-DDJ-FLX6.midi.xml skins/BiteDJ/library.xml skins/BiteDJ/settings.xml skins/BiteDJ/padfx-settings.xml skins/BiteDJ/skin.xml skins/BiteDJ/waveform.xml skins/BiteDJ/templates/grid_deck_row.xml; do
     sudo install -m 0644 "$source/$relative" "/usr/local/share/mixxx/$relative"
     cmp "$source/$relative" "/usr/local/share/mixxx/$relative"
 done
-for name in Pioneer-DDJ-FLX6-script.js Pioneer-DDJ-FLX6.midi.xml; do
+for name in piflex-padfx.js Pioneer-DDJ-FLX6-script.js Pioneer-DDJ-FLX6.midi.xml; do
     cp "$source/controllers/$name" "/home/pompu_5/.mixxx/controllers/$name"
     cmp "$source/controllers/$name" "/home/pompu_5/.mixxx/controllers/$name"
 done

@@ -42,6 +42,10 @@
             <SetVariable name="Text">Stream</SetVariable>
             <SetVariable name="ConfigKey">stream</SetVariable>
           </Template>
+          <Template src="skin:templates/setting_subtab_button.xml">
+            <SetVariable name="Text">Pad FX</SetVariable>
+            <SetVariable name="ConfigKey">padfx</SetVariable>
+          </Template>
         </Children>
       </WidgetGroup>
 
@@ -1410,6 +1414,7 @@
               <WidgetGroup><ObjectName>SettingsSpacer</ObjectName><Size>0me,0me</Size></WidgetGroup>
             </Children>
           </WidgetGroup>
+          <Template src="skin:padfx-settings.xml" trigger="[SettingsTab],padfx"/>
         </Children>
       </WidgetStack>
 

@@ -510,6 +510,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/effects/chains/outputeffectchain.cpp
   src/effects/chains/pergroupeffectchain.cpp
   src/effects/chains/quickeffectchain.cpp
+  src/effects/chains/padeffectchain.cpp
   src/effects/chains/standardeffectchain.cpp
   src/effects/effectbuttonparameterslot.cpp
   src/effects/effectchain.cpp
@@ -793,6 +794,7 @@ add_library(mixxx-lib STATIC EXCLUDE_FROM_ALL
   src/preferences/replaygainsettings.cpp
   src/preferences/settingsmanager.cpp
   src/preferences/systemsettings.cpp
+  src/preferences/padfxsettings.cpp
   src/preferences/upgrade.cpp
   src/recording/recordingmanager.cpp
   src/skin/legacy/colorschemeparser.cpp

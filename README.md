@@ -140,6 +140,21 @@ Sources: [overview panels](res/skins/BiteDJ/effects.xml),
 - Rotary-filter state handling fixes and a dedicated regression test.
 - Beat FX next/previous selection, shorter/longer period, focused effect toggle,
   and Shift + ON/OFF disabling all three effect slots.
+- **Rekordbox 6.7-style Pad FX bank**: eight pads plus eight Shift pads on all
+  four decks, using private native-effect lanes rather than numbered user
+  presets. Echo/reverb retain release tails; Release Echo gates its own dry
+  signal without changing the channel fader. Same-effect holds restore the
+  earlier held pad when the newer one is released. Sound/transport voicing is
+  approximate, not Rekordbox DSP. Local controller and Echo DSP tests pass;
+  Pi performance and physical-pad listening checks are still required.
+  See [Pad FX implementation and validation](docs/pad-fx.md).
+- **Pad FX settings editor**: per-deck normal/Shift assignments, an Off slot,
+  bounded Echo/delay beat overrides, five native-strength levels, momentary or
+  toggle Release Echo, selected-pad reset, and an all-deck Pad FX stop. Choices
+  are saved separately from user effect-rack presets. Held pads keep their
+  original assignment until released; track unload clears latched effects.
+  Transport effects stay momentary. See the [Rekordbox-to-BiteDJ system map](docs/rekordbox-system-map.md)
+  for verified behavior, deliberate differences, and remaining validation.
 
 Sources: [FLX6 script](res/controllers/Pioneer-DDJ-FLX6-script.js),
 [library controller routing](src/library/librarycontrol.cpp),
@@ -153,8 +168,12 @@ Sources: [FLX6 script](res/controllers/Pioneer-DDJ-FLX6-script.js),
   toggle, and a controller action to open it directly.
 - Prepare supports track drops, avoids adding already-present tracks, and keeps
   its hidden local playlist across clean restarts without rewriting USB playlists.
-- Configurable library columns and relative widths, retaining the upstream
-  column controls alongside PiFlex's text-size persistence changes.
+- Drag browser column headings to reorder them; order is saved per library model.
+  Column visibility and relative widths remain controlled by the existing
+  settings, alongside PiFlex's text-size persistence changes.
+- Sorting by BPM retains the selected track and scrolls to its sorted position,
+  keeping a selected 140 BPM track among the other 140 BPM tracks. This sorts
+  the current results; it does not restrict the list to an exact-BPM filter.
 - **Track Replace: Lock / Fader / Stop / Live** in General settings:
   Lock protects a playing deck; Fader permits replacement only with its channel
   fader down or main-mix routing off; Stop replaces and stops; Live replaces and

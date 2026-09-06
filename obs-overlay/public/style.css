@@ -1,0 +1,26 @@
+:root { color-scheme: dark; --accent: #67ead4; font-family: 'Segoe UI', Arial, sans-serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body.output { background: transparent; overflow: hidden; }
+#tracks { display: flex; flex-direction: column; gap: 8px; padding: 12px; width: 100%; }
+.track { width: 100%; color: var(--accent); }
+.track svg { display: block; width: 100%; height: auto; overflow: visible; color: inherit; }
+[data-theme="glass"] .glass { visibility: visible; }
+#demo-label { position: fixed; right: 24px; bottom: 12px; color: #ffba76; font-size: 11px; letter-spacing: 2px; }
+body.setup { min-height: 100vh; padding: 50px max(24px, calc((100vw - 1120px)/2)); background: #0b1017; color: #edf3fa; }
+.kicker { color: var(--accent); letter-spacing: 3px; font-size: 12px; font-weight: 700; }
+h1 { font-size: 42px; letter-spacing: -1.5px; margin: 12px 0; }
+p { color: #aebac8; line-height: 1.6; max-width: 820px; }
+.grid { display: grid; grid-template-columns: 300px 1fr; gap: 32px; margin: 32px 0; }
+form, .preview { border: 1px solid #26333e; border-radius: 16px; padding: 24px; }
+label { display: block; font-size: 13px; color: #c4d0dd; margin-bottom: 18px; }
+select, input:not([type=checkbox]) { display: block; width: 100%; margin-top: 7px; background: #141e2a; color: #edf3fa; border: 1px solid #374455; border-radius: 6px; padding: 10px; }
+input[type=color] { height: 42px; }
+.preview { background: repeating-conic-gradient(#14212d 0% 25%, #192a37 0% 50%) 50% / 32px 32px; padding: 0; overflow: hidden; }
+iframe { width: 100%; height: 340px; border: 0; display: block; }
+.url { display: flex; gap: 12px; }
+.url input { margin: 0 !important; min-width: 0; }
+button, a.button { border: 0; border-radius: 7px; background: var(--accent); color: #0b1920; padding: 12px 18px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+#status { padding: 12px 0; font-size: 13px; }
+code { color: #d5e5f3; }
+@media (max-width: 760px) { .grid { grid-template-columns: 1fr; } body.setup { padding: 24px; } h1 { font-size: 32px; } }

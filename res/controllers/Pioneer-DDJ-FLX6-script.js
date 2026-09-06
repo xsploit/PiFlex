@@ -385,6 +385,7 @@ PioneerDDJFLX6.toggleLight = function(midiIn, active) {
 //
 
 PioneerDDJFLX6.init = function() {
+    PiFlexPadFx.init();
     engine.setValue("[EffectRack1_EffectUnit1]", "show_focus", 1);
 
     engine.makeConnection("[Channel1]", "vu_meter", PioneerDDJFLX6.vuMeterUpdate);
@@ -1162,56 +1163,9 @@ PioneerDDJFLX6.mergeEffectButtonPressed = function(channel, _control, value, _st
     }
 };
 
-PioneerDDJFLX6.padFxPressed = function(channel, control, value, status, group){
-    //if(value == 0)
-    //    return;
-    console.log("padFxPressed channel: "+channel+" control: "+control);
-    let groupPreset = group.split(";");
-    if(groupPreset.length < 2)
-        return;
-    let side = "";
-    switch (groupPreset[0]) {
-        case "[Channel1]":
-            side = "L";
-            break;
-        case "[Channel2]":
-            side = "R";
-            break;
-        case "[Channel3]":
-            side = "L";
-            break;
-        case "[Channel4]":
-            side = "R";
-            break;
-    }
-
-    if(side == "")
-        return;
-    let enabled = this.mergeFxEnabled[groupPreset[0]];
-    if(value > 0)
-    {
-        if(enabled)
-        {
-            //this.stopMergeFx(side, groupPreset[0]);
-            engine.setValue("[QuickEffectRack1_"+groupPreset[0]+"]","loaded_chain_preset",groupPreset[1]);
-        }
-        else
-        {
-            this.startMergeFx(side, groupPreset[0], groupPreset[1]);
-            engine.setValue("[QuickEffectRack1_"+groupPreset[0]+"]","super1",0.75);
-        }
-        this.startLEDBlink(status, control, 125);
-    }
-    else
-    {
-        if(enabled)
-        {
-            this.stopMergeFx(side,groupPreset[0]);
-        }
-        this.stopLEDBlink(status,control);
-    }
-
-}
+PioneerDDJFLX6.padFxPressed = function(channel, control, value, status, group) {
+    PiFlexPadFx.press(control, value, status, group.split(";")[0]);
+};
 
 PioneerDDJFLX6.startMergeFx = function(side, group, preset){
     this.mergeFxBeforeValue[group] = engine.getValue("[QuickEffectRack1_"+group+"]","super1");
@@ -1583,6 +1537,7 @@ PioneerDDJFLX6.quickJumpBack = function(_channel, _control, value, _status, grou
 //
 
 PioneerDDJFLX6.shutdown = function() {
+    PiFlexPadFx.shutdown();
     // reset vumeter
     PioneerDDJFLX6.toggleLight(PioneerDDJFLX6.lights.deck1.vuMeter, false);
     PioneerDDJFLX6.toggleLight(PioneerDDJFLX6.lights.deck2.vuMeter, false);

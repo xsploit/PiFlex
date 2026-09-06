@@ -15,6 +15,7 @@ The current image profile includes:
 - Pi 5 `linux-image-rpi-2712` packages with 16 KiB pages
 - Official 10-inch Touch Display 2 in landscape orientation
 - Sway kiosk startup with BiteDJ crash recovery
+- PiFlex graphical boot screen with a loading bar and boot status, continuing into kiosk startup
 - Direct ALSA operation without a PulseAudio or PipeWire server
 - CPU/IRQ tuning for BiteDJ audio and the FLX6 USB device
 - Ethernet, Wi-Fi through iwd, SSH, mDNS, Chromium, and an on-screen keyboard

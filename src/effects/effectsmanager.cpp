@@ -6,6 +6,7 @@
 #include "effects/backends/builtin/graphiceqeffect.h"
 #include "effects/chains/equalizereffectchain.h"
 #include "effects/chains/outputeffectchain.h"
+#include "effects/chains/padeffectchain.h"
 #include "effects/chains/quickeffectchain.h"
 #include "effects/chains/standardeffectchain.h"
 #include "effects/effectslot.h"
@@ -175,6 +176,20 @@ EffectChainPointer EffectsManager::getStandardEffectChain(int unitNumber) const 
 void EffectsManager::addDeck(const ChannelHandleAndGroup& deckHandleGroup) {
     addEqualizerEffectChain(deckHandleGroup);
     addQuickEffectChain(deckHandleGroup);
+    // Empty lanes are cheap; DSP is warmed only when the FLX6 mapping starts.
+    // Not persisted in effects.xml and not inserted into the user preset list.
+    // Explicit processing order: tone/modulation first, time-based tails last.
+    const QList<QPair<QString, QString>> padLanes{
+            {"sweep", "filter"}, {"filterlfo", "filter"},
+            {"crush", "bitcrusher"}, {"flanger", "flanger"},
+            {"trans", "tremolo"}, {"echo", "padecho"},
+            {"delay", "padecho"}, {"dub", "padecho"},
+            {"reverb", "reverb"}, {"space", "reverb"}};
+    for (const auto& [lane, effect] : padLanes) {
+        EffectChainPointer chain(new PadEffectChain(deckHandleGroup, lane,
+                "org.mixxx.effects." + effect, this, m_pMessenger));
+        m_effectChainSlotsByGroup.insert(chain->group(), chain);
+    }
     // If a deck is added after setup() was run we need to read effects.xml
     // again to initialize its QuickEffect chain, either with defaults or the
     // previous state.

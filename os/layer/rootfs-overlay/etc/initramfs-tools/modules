@@ -1,0 +1,5 @@
+# PiFlex Touch Display 2: make the display available to early Plymouth.
+vc4
+drm_rp1_dsi
+panel_ilitek_ili79600a
+rpi_panel_v2_regulator

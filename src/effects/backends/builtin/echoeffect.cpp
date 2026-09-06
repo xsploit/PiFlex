@@ -8,6 +8,43 @@
 
 constexpr int EchoGroupState::kMaxDelaySeconds;
 
+QString PadEchoEffect::getId() {
+    return "org.mixxx.effects.padecho";
+}
+
+EffectManifestPointer PadEchoEffect::getManifest() {
+    auto manifest = EchoEffect::getManifest();
+    manifest->setId(getId());
+    manifest->setName(QObject::tr("Pad Echo"));
+    manifest->setShortName(QObject::tr("Pad Echo"));
+    manifest->setAddDryToWet(false);
+    auto dry = manifest->addParameter();
+    dry->setId("dry_amount");
+    dry->setName(QObject::tr("Dry"));
+    dry->setRange(0.0, 1.0, 1.0);
+    return manifest;
+}
+
+void PadEchoEffect::loadEngineEffectParameters(
+        const QMap<QString, EngineEffectParameterPointer>& parameters) {
+    EchoEffect::loadEngineEffectParameters(parameters);
+    m_dry = parameters.value("dry_amount");
+}
+
+void PadEchoEffect::processChannel(EchoGroupState* state, const CSAMPLE* input,
+        CSAMPLE* output, const mixxx::EngineParameters& parameters,
+        EffectEnableState enable, const GroupFeatureState& features) {
+    if (enable == EffectEnableState::Enabling) {
+        state->pad_prev_dry = 1.0f;
+    }
+    EchoEffect::processChannel(state, input, output, parameters, enable, features);
+    const CSAMPLE_GAIN dry = enable == EffectEnableState::Disabling
+            ? 1.0f : static_cast<CSAMPLE_GAIN>(m_dry->value());
+    SampleUtil::addWithRampingGain(output, input, state->pad_prev_dry, dry,
+            parameters.samplesPerBuffer());
+    state->pad_prev_dry = dry;
+}
+
 namespace {
 
 void incrementRing(int* pIndex, int increment, int length) {

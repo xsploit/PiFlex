@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 142" fill="none" color="#67ead4" role="img" aria-label="Now playing">
+  <defs>
+    <linearGradient id="line" x1="20" x2="860" y1="0" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="currentColor"/><stop offset=".58" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-40%" width="120%" height="180%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".75"/></filter>
+    <clipPath id="title-clip"><path d="M20 39H872V85H20Z"/></clipPath>
+    <clipPath id="artist-clip"><path d="M20 88H665V117H20Z"/></clipPath>
+  </defs>
+  <rect class="glass" x="4" y="4" width="890" height="132" rx="10" fill="#101821" fill-opacity=".68" visibility="hidden"/>
+  <g filter="url(#shadow)" font-family="Segoe UI, Arial, sans-serif">
+    <path d="M20 17L28 22L20 27Z" fill="currentColor"/>
+    <text class="eyebrow" x="40" y="26" fill="currentColor" font-size="11" font-weight="700" letter-spacing="3">NOW PLAYING</text>
+    <text class="deck-label" x="866" y="26" text-anchor="end" fill="#dde5eb" fill-opacity=".65" font-size="10" font-weight="600" letter-spacing="2">01</text>
+    <text class="title" x="19" y="75" clip-path="url(#title-clip)" fill="#fff" font-size="36" font-weight="650" letter-spacing="-.8">Midnight Transmission</text>
+    <text class="artist" x="20" y="108" clip-path="url(#artist-clip)" fill="#e0e6ed" font-size="21" font-weight="400" letter-spacing=".3">Example Artist</text>
+    <text class="details" x="866" y="107" text-anchor="end" fill="#e0e6ed" fill-opacity=".75" font-size="12" font-weight="500" letter-spacing="1.2">140 BPM · 8A</text>
+    <path d="M20 127H870" stroke="url(#line)" stroke-width="1"/>
+    <path d="M20 127H58" stroke="currentColor" stroke-width="2"/>
+  </g>
+</svg>

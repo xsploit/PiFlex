@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=PiFlex
+Description=PiFlex performance system startup
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/piflex
+ScriptFile=/usr/share/plymouth/themes/piflex/piflex.script

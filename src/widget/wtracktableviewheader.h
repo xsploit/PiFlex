@@ -75,6 +75,7 @@ class WTrackTableViewHeader : public QHeaderView {
   private slots:
     void showOrHideColumn(int);
     void slotReapplyColumnControl();
+    void slotSaveColumnOrder();
 
   private:
     int hiddenCount();
@@ -84,4 +85,5 @@ class WTrackTableViewHeader : public QHeaderView {
     QMenu m_menu;
     QMap<int, QCheckBox*> m_columnCheckBoxes;
     QMap<int, int> m_hiddenColumnSizes;
+    bool m_restoringHeaderState = false;
 };

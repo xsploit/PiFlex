@@ -35,6 +35,7 @@ mmdebstrap:
     - jq
     - libgl1-mesa-dri
     - libnss-mdns
+    - libqt6svg6
     - mixxx
     - nodejs
     - npm
@@ -42,6 +43,8 @@ mmdebstrap:
     - pi-bluetooth
     - polkitd
     - pkexec
+    - plymouth
+    - plymouth-themes
     - qt6-qpa-plugins
     - qt6-wayland
     - rsync

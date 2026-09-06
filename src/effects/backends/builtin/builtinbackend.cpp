@@ -66,6 +66,8 @@ BuiltInBackend::BuiltInBackend() {
     registerEffect<DistortionEffect>();
     registerEffect<GlitchEffect>();
     registerEffect<CompressorEffect>();
+    // Append: do not shift legacy controller mappings' effect-list positions.
+    registerEffect<PadEchoEffect>();
 }
 
 std::unique_ptr<EffectProcessor> BuiltInBackend::createProcessor(

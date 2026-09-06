@@ -11,9 +11,16 @@ test -f "$assets/bitedj-rootfs.tar.gz"
 test -f "$assets/edmc-companion/package-lock.json"
 test -f "$assets/controllers/Pioneer-DDJ-FLX6-script.js"
 test -f "$assets/controllers/Pioneer-DDJ-FLX6.midi.xml"
+test -f "$assets/controllers/piflex-padfx.js"
+test -s "$assets/boot-screen/pflx-boot-screen"
 
 cp -a "$overlay/." "$rootfs/"
 tar -xzf "$assets/bitedj-rootfs.tar.gz" -C "$rootfs"
+install -m 0755 "$assets/boot-screen/pflx-boot-screen" "$rootfs/usr/local/bin/pflx-boot-screen"
+install -d "$rootfs/usr/local/share/piflex/boot"
+for name in piflex-logo.svg Ubuntu-R.ttf Ubuntu.LICENCE.txt; do
+    install -m 0644 "$assets/boot-screen/$name" "$rootfs/usr/local/share/piflex/boot/$name"
+done
 
 # The public layer uses a placeholder so builders can choose their own account
 # name without editing every systemd unit and mount helper.
@@ -37,6 +44,8 @@ find "$rootfs/opt/pflx/edmc-companion" -path '*/node_modules' -prune -o -type d 
 find "$rootfs/opt/pflx/edmc-companion" -path '*/node_modules' -prune -o -type f -exec chmod 0644 {} +
 
 install -d "$rootfs/usr/local/share/mixxx/controllers"
+install -m 0644 "$assets/controllers/piflex-padfx.js" \
+    "$rootfs/usr/local/share/mixxx/controllers/piflex-padfx.js"
 install -m 0644 "$assets/controllers/Pioneer-DDJ-FLX6-script.js" \
     "$rootfs/usr/local/share/mixxx/controllers/Pioneer-DDJ-FLX6-script.js"
 install -m 0644 "$assets/controllers/Pioneer-DDJ-FLX6.midi.xml" \
@@ -90,6 +99,7 @@ display_auto_detect=0
 dtoverlay=vc4-kms-dsi-ili79600-10-1inch,rotation=90
 disable_fw_kms_setup=1
 max_framebuffers=2
+disable_splash=1
 EOF
 
 cmdline="$rootfs/boot/firmware/cmdline.txt"
@@ -100,6 +110,15 @@ import sys
 path = pathlib.Path(sys.argv[1])
 tokens = path.read_text(encoding="utf-8").strip().split()
 extra = [
+    "console=tty3",
+    "quiet",
+    "splash",
+    "loglevel=3",
+    "logo.nologo",
+    "vt.global_cursor_default=0",
+    "systemd.show_status=false",
+    "rd.systemd.show_status=false",
+    "plymouth.ignore-serial-consoles",
     "threadirqs",
     "isolcpus=2,3",
     "nohz_full=3",
@@ -111,10 +130,16 @@ extra = [
 ]
 for token in extra:
     key = token.split("=", 1)[0]
-    tokens = [existing for existing in tokens if existing.split("=", 1)[0] != key]
+    if key == "console":
+        tokens = [existing for existing in tokens if existing not in ("console=tty1", "console=tty3")]
+    else:
+        tokens = [existing for existing in tokens if existing.split("=", 1)[0] != key]
     tokens.append(token)
 path.write_text(" ".join(tokens) + "\n", encoding="utf-8")
 PY
+
+# Include the selected theme and early display modules in existing image initrds.
+chroot "$rootfs" /usr/sbin/update-initramfs -u -k all
 
 cat > "$rootfs/etc/os-release" <<'EOF'
 NAME="PiFlex OS"

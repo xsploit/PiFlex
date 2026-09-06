@@ -64,6 +64,11 @@ void VisibleEffectsList::readEffectsXml(
     // Unhide all effects that are not in either list.
     const auto manifests = pBackendManager->getManifestsForBackend(EffectBackendType::BuiltIn);
     for (const EffectManifestPointer& pManifest : std::as_const(manifests)) {
+        // Internal Pad FX lane helper, not a new user-selectable effect. In
+        // particular, do not prepend it and shift legacy numeric mappings.
+        if (pManifest->id() == QStringLiteral("org.mixxx.effects.padecho")) {
+            continue;
+        }
         if (!visibleEffects.contains(pManifest) &&
                 !hiddenEffects.contains(pManifest)) {
             // prepend so un-hidden effects are discoverable

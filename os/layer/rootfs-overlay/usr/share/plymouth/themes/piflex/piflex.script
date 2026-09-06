@@ -1,0 +1,63 @@
+# PiFlex: original wordmark, OS progress, and readable boot status.
+Window.SetBackgroundTopColor(0.03137, 0.04314, 0.06275);
+Window.SetBackgroundBottomColor(0.03137, 0.04314, 0.06275);
+scale = Math.Min(Window.GetWidth() / 1920, Window.GetHeight() / 1200);
+cx = Window.GetX() + Window.GetWidth() / 2;
+cy = Window.GetY() + Window.GetHeight() / 2;
+logo = Sprite(Image("logo.png").Scale(810 * scale, 144 * scale));
+logo.SetPosition(cx - 405 * scale, cy - 150 * scale, 1);
+tag_image = Image.Text("P E R F O R M A N C E   S Y S T E M", 0.43, 0.47, 0.53, 1, "Sans 11");
+tag = Sprite(tag_image);
+tag.SetPosition(cx - tag_image.GetWidth() / 2, cy + 5 * scale, 1);
+track = Sprite(Image("track.png").Scale(660 * scale, Math.Max(2, 4 * scale)));
+track.SetPosition(cx - 330 * scale, cy + 105 * scale, 1);
+bar_source = Image("blue.png");
+bar = Sprite();
+bar.SetPosition(cx - 330 * scale, cy + 105 * scale, 2);
+label = Sprite();
+level = 0.02;
+prompting = 0;
+
+fun show_label(text) {
+    local.im = Image.Text(text, 0.71, 0.75, 0.82, 1, "Sans 14");
+    if (im.GetWidth() > 1000 * scale)
+        im = im.Scale(1000 * scale, im.GetHeight() * 1000 * scale / im.GetWidth());
+    label.SetImage(im);
+    label.SetPosition(cx - im.GetWidth() / 2, cy + 143 * scale, 3);
+}
+fun set_level(value) {
+    global.level = Math.Max(global.level, Math.Min(0.8, value));
+    bar.SetImage(bar_source.Scale(Math.Max(1, 660 * scale * global.level), Math.Max(2, 4 * scale)));
+}
+fun boot_progress(duration, fraction) { set_level(fraction * 0.8); }
+fun root_mounted() {
+    set_level(0.30);
+    if (!global.prompting) show_label("STARTING SYSTEM SERVICES");
+}
+fun status_update(text) { if (!global.prompting) show_label(text); }
+fun message(text) { if (!global.prompting) show_label(text); }
+fun normal() {
+    global.prompting = 0;
+    show_label("STARTING PIFLEX");
+}
+fun password(prompt, count) {
+    global.prompting = 1;
+    local.mask = "";
+    for (local.i = 0; i < count; i++) mask += "*";
+    show_label(prompt + "  " + mask);
+}
+fun question(prompt, entry) {
+    global.prompting = 1;
+    show_label(prompt + "  " + entry);
+}
+fun quitting() { show_label("STARTING DISPLAY"); set_level(0.8); }
+Plymouth.SetBootProgressFunction(boot_progress);
+Plymouth.SetRootMountedFunction(root_mounted);
+Plymouth.SetUpdateStatusFunction(status_update);
+Plymouth.SetDisplayMessageFunction(message);
+Plymouth.SetDisplayNormalFunction(normal);
+Plymouth.SetDisplayPasswordFunction(password);
+Plymouth.SetDisplayQuestionFunction(question);
+Plymouth.SetQuitFunction(quitting);
+set_level(0.02);
+show_label("STARTING PIFLEX");

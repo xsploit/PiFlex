@@ -1,0 +1,9 @@
+#!/bin/sh
+set -u
+
+# Sway owns both windows. If the optional splash is unavailable, the existing
+# supervisor still starts normally. No boot delay or readiness dependency.
+if [ -x /usr/local/bin/pflx-boot-screen ]; then
+    /usr/local/bin/pflx-boot-screen >/dev/null 2>&1 &
+fi
+exec /usr/local/bin/pflx-bitedj-supervisor

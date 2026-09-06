@@ -167,6 +167,28 @@ TEST_F(LibraryColumnControlTest, ManagedLayoutIsAppliedAndSelfHealing) {
 
     // The rating column must fit all five stars.
     EXPECT_GE(header->sectionSize(ratingCol), StarRating().sizeHint().width());
+
+    // Reordered headers survive reconstruction, without restoring stale pixel
+    // widths or resurrecting internal / managed-hidden columns.
+    const int artistCol = model.fieldIndex(ColumnCache::COLUMN_LIBRARYTABLE_ARTIST);
+    const int target = header->visualIndex(artistCol);
+    header->resizeSection(titleCol, 37);
+    header->moveSection(header->visualIndex(titleCol), target);
+    const QString savedOrder = model.getModelSetting("header_state_pb");
+    ASSERT_FALSE(savedOrder.isEmpty());
+    QTableView restoredView;
+    restoredView.resize(800, 480);
+    auto* restoredHeader = new WTrackTableViewHeader(Qt::Horizontal, &restoredView);
+    restoredView.setModel(&model);
+    restoredView.setHorizontalHeader(restoredHeader);
+    restoredView.show();
+    QApplication::processEvents();
+    EXPECT_EQ(target, restoredHeader->visualIndex(titleCol));
+    EXPECT_NE(37, restoredHeader->sectionSize(titleCol));
+    EXPECT_TRUE(restoredHeader->isSectionHidden(trackIdCol));
+    EXPECT_TRUE(restoredHeader->isSectionHidden(previewCol));
+    // Restoration emits sectionMoved, but must not overwrite the saved state.
+    EXPECT_EQ(savedOrder, model.getModelSetting("header_state_pb"));
     // BPM and Key need a visible gutter instead of reading as one header.
     EXPECT_GE(header->sectionSize(bpmCol), 56);
     EXPECT_GE(header->sectionSize(keyCol), 56);

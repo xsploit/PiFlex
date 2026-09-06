@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 620 110">
+  <title>PiFlex</title>
+  <desc>Original extended, forward-slanted PiFlex wordmark.</desc>
+  <g transform="translate(27 15) skewX(-12)" fill="#f5f7fa" fill-rule="evenodd">
+    <path d="M0 0H70L84 14V42L70 56H22V80H0ZM22 19V37H59L63 33V23L59 19Z"/>
+    <path d="M104 0H128V80H104Z"/>
+    <path d="M150 0H234V20H174V33H226V53H174V80H150Z"/>
+    <path d="M256 0H280V60H340V80H256Z"/>
+    <path d="M362 0H448V20H386V31H438V49H386V60H448V80H362Z"/>
+    <path d="M468 0H498L521 25L544 0H574L536 40L574 80H544L521 55L498 80H468L506 40Z"/>
+  </g>
+</svg>

@@ -29,6 +29,7 @@
 #include "preferences/audiodevicesettings.h"
 #include "preferences/controllersettings.h"
 #include "preferences/systemsettings.h"
+#include "preferences/padfxsettings.h"
 #include "preferences/dialog/dlgpreferences.h"
 #include "preferences/settingsmanager.h"
 #ifdef __MODPLUG__
@@ -554,6 +555,7 @@ void CoreServices::initialize(QApplication* pApp) {
     // drive; both dropped in finalize() before those two are destroyed.
     m_pSystemSettings = std::make_unique<SystemSettings>(
             pConfig, m_pPlayerManager, m_pRecordingManager);
+    m_pPadFxSettings = std::make_unique<PadFxSettings>(pConfig);
 
     // Bite DJ: the samplers are filled from one USB drive the DJ picks on the
     // Samplers tab. Constructed after SystemSettings (which enumerates the
@@ -715,6 +717,7 @@ void CoreServices::finalize() {
     // further below); drop it here. Its destructor also stops a per-drive
     // recording, which needs both of them alive.
     m_pSystemSettings.reset();
+    m_pPadFxSettings.reset();
 
     // SoundManager depend on Engine and Config
     qDebug() << t.elapsed(false).debugMillisWithUnit() << "deleting SoundManager";

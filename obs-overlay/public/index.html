@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>BiteDJ · OBS overlay setup</title><link rel="stylesheet" href="/style.css"></head>
+<body class="setup"><div class="kicker">BITEDJ / BROADCAST TOOLS</div><h1>Your mix. On screen.</h1>
+<p>A transparent now-playing layer for OBS. Track changes come from BiteDJ events, not library polling. During a mix, both open decks can appear.</p>
+<div class="grid"><form id="options">
+<label>Track selection<select name="mode"><option value="mix">In the mix · all open decks</option><option value="dominant">Single · highest channel fader</option><option value="loaded">All loaded decks · includes cued tracks</option><option value="deck1">Deck 1 · even when paused</option><option value="deck2">Deck 2 · even when paused</option><option value="deck3">Deck 3 · even when paused</option><option value="deck4">Deck 4 · even when paused</option></select></label>
+<label>Appearance<select name="theme"><option value="minimal">Transparent SVG</option><option value="glass">SVG + subtle backing</option></select></label>
+<label>Accent<input type="color" name="accent" value="#67ead4"></label>
+<label><input type="checkbox" name="details" checked> Show BPM and key</label>
+<label><input type="checkbox" id="demo" checked> Preview with labeled example tracks</label>
+<div id="status" role="status">Checking bridge…</div>
+</form><div class="preview"><iframe id="preview" title="Overlay preview"></iframe></div></div>
+<label>OBS Browser Source URL · always live, never demo</label><div class="url"><input id="url" readonly aria-label="OBS Browser Source URL"><button id="copy" type="button">Copy URL</button></div>
+<p>Add a <strong>Browser Source</strong> in OBS, paste this URL, and use <strong>900 × 320</strong> for up to two decks (increase height for more). Position/scale it over your visuals. Enable <strong>Shutdown source when not visible</strong> to release its subscription.</p>
+<p>The on-stream graphic is a transparent SVG, not this settings page. <a href="/now-playing.svg" download="bitedj-now-playing.svg">Download the editable SVG template</a> (example text; live updates use the overlay URL).</p>
+<p>On the Pi: <strong>Settings → Stream → Metadata Start → Share with LAN</strong>. Audio broadcasting is independent. Change the Pi address through <code>BITEDJ_SOURCE</code> when starting the bridge.</p>
+<p>No active decks or a lost connection makes the live overlay transparent. “In the mix” follows playing state, channel faders and main routing, not the crossfader or measured audio. No playback commands are sent.</p>
+<script type="module" src="/setup.mjs"></script></body></html>

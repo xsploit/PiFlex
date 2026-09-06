@@ -33,6 +33,7 @@ class EchoGroupState : public EffectState {
         prev_delay_samples = 0;
         write_position = 0;
         ping_pong = 0;
+        pad_prev_dry = 1.0f;
     };
 
     mixxx::SampleBuffer delay_buf;
@@ -41,6 +42,7 @@ class EchoGroupState : public EffectState {
     int prev_delay_samples;
     int write_position;
     int ping_pong;
+    CSAMPLE_GAIN pad_prev_dry;
 };
 
 class EchoEffect : public EffectProcessorImpl<EchoGroupState> {
@@ -75,4 +77,19 @@ class EchoEffect : public EffectProcessorImpl<EchoGroupState> {
     EngineEffectParameterPointer m_pTripletParameter;
 
     DISALLOW_COPY_AND_ASSIGN(EchoEffect);
+};
+
+// Existing Echo DSP plus a ramped local dry path for Release Echo; no fader writes.
+class PadEchoEffect final : public EchoEffect {
+  public:
+    static QString getId();
+    static EffectManifestPointer getManifest();
+    void loadEngineEffectParameters(
+            const QMap<QString, EngineEffectParameterPointer>& parameters) override;
+    void processChannel(EchoGroupState* state, const CSAMPLE* input, CSAMPLE* output,
+            const mixxx::EngineParameters& parameters, EffectEnableState enable,
+            const GroupFeatureState& features) override;
+
+  private:
+    EngineEffectParameterPointer m_dry;
 };

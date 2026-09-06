@@ -7,9 +7,266 @@
     </info>
     <controller id="DDJ-FLX6">
         <scriptfiles>
+            <file filename="piflex-padfx.js"/>
             <file filename="Pioneer-DDJ-FLX6-script.js" functionprefix="PioneerDDJFLX6"/>
         </scriptfiles>
         <controls>
+            <control>
+                <group>[Channel1];9</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 1, deck 1</description>
+                <status>0x98</status>
+                <midino>0x10</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];10</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 2, deck 1</description>
+                <status>0x98</status>
+                <midino>0x11</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];11</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 3, deck 1</description>
+                <status>0x98</status>
+                <midino>0x12</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];12</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 4, deck 1</description>
+                <status>0x98</status>
+                <midino>0x13</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];13</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 5, deck 1</description>
+                <status>0x98</status>
+                <midino>0x14</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];14</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 6, deck 1</description>
+                <status>0x98</status>
+                <midino>0x15</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];15</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 7, deck 1</description>
+                <status>0x98</status>
+                <midino>0x16</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel1];16</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 8, deck 1</description>
+                <status>0x98</status>
+                <midino>0x17</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];9</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 1, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x10</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];10</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 2, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x11</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];11</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 3, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x12</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];12</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 4, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x13</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];13</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 5, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x14</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];14</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 6, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x15</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];15</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 7, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x16</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel2];16</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 8, deck 2</description>
+                <status>0x9A</status>
+                <midino>0x17</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];9</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 1, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x10</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];10</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 2, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x11</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];11</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 3, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x12</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];12</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 4, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x13</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];13</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 5, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x14</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];14</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 6, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x15</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];15</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 7, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x16</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel3];16</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 8, deck 3</description>
+                <status>0x9C</status>
+                <midino>0x17</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];9</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 1, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x10</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];10</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 2, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x11</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];11</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 3, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x12</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];12</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 4, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x13</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];13</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 5, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x14</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];14</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 6, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x15</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];15</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 7, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x16</midino>
+                <options><script-binding/></options>
+            </control>
+            <control>
+                <group>[Channel4];16</group>
+                <key>PioneerDDJFLX6.padFxPressed</key>
+                <description>RB6.7 Pad FX shifted pad 8, deck 4</description>
+                <status>0x9E</status>
+                <midino>0x17</midino>
+                <options><script-binding/></options>
+            </control>
             <control>
                 <group>[Channel1]</group>
                 <key>hotcue_1_activate</key>
